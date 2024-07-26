@@ -1,3 +1,5 @@
+#pragma once
+
 #include <mutex>
 #include <random>
 
@@ -32,7 +34,7 @@ public:
         Random();
     }
 
-    double rnd01(void)
+    double rnd01()
     {
         // prevent data race between threads
         std::lock_guard<std::mutex> lock(mtx_rand);
@@ -40,4 +42,12 @@ public:
     }
 };
 
-}  // namespace rododendrs
+// global variable that holds the random state
+inline Random _g_random{};
+
+double rnd01()
+{
+    return _g_random.rnd01();
+}
+
+}
