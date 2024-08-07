@@ -65,19 +65,19 @@ double rnd_in_range(double min, double max)
     return retval;
 }
 
-// relative mean squared error
+// relative root mean squared error
 template <template <typename...> typename P, template <typename...> typename C>
-double rmse(const P<double>& predicted, const C<double>& correct)
+double rrmse(const P<double>& predicted, const C<double>& correct)
 {
     assert(!predicted.empty());
     assert(predicted.size() == correct.size());
-    double sum = 0;
+    double sum_top = 0;
+    double sum_bot = 0;
     for (size_t i = 0; i < predicted.size(); i++) {
-        sum += std::pow(predicted[i] - correct[i], 2) /
-               std::pow(correct[i], 2);
+        sum_top += std::pow(predicted[i] - correct[i], 2);
+        sum_bot += std::pow(correct[i], 2);
     }
-    sum = sum / (double)predicted.size();
-    return std::sqrt(sum);
+    return std::sqrt((sum_top / (double)predicted.size()) / sum_bot);
 }
 
 }  // namespace rododendrs
