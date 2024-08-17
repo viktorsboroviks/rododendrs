@@ -1,17 +1,17 @@
 .PHONY: \
 	format \
-	clang-format \
+	format-cpp \
 	lint \
-	cppcheck
+	lint-cpp
 
-format: clang-format
+format: format-cpp
 
-clang-format: include/rododendrs.hpp
+format-cpp: include/rododendrs.hpp
 	clang-format -i $^
 
-lint: cppcheck
+lint: lint-cpp
 
-cppcheck: \
+lint-cpp: \
 		include/rododendrs.hpp
 	cppcheck \
 		--enable=warning,portability,performance \
