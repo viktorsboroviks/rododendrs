@@ -8,6 +8,7 @@ BinPackArguments: false
 BinPackParameters: false
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: AcrossComments
 AllowShortBlocksOnASingleLine: Empty
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
@@ -21,6 +22,8 @@ IncludeBlocks: Regroup
 Language: Cpp
 PackConstructorInitializers: Never
 PointerAlignment: Left
+QualifierAlignment: Left
+ReferenceAlignment: Pointer
 ReflowComments: true
 SpaceBeforeParens: ControlStatements
 SpacesInParentheses: false

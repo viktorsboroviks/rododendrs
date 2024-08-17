@@ -30,13 +30,6 @@ public:
         std::uniform_real_distribution<double> unif(0, 1);
     }
 
-    Random(const Random& other)
-    {
-        // construct a new object on copy
-        (void)other;
-        Random();
-    }
-
     double rnd01()
     {
         // prevent data race between threads
