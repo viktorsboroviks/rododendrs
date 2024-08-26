@@ -73,4 +73,70 @@ double rrmse(const P<double>& predicted, const C<double>& correct)
     return std::sqrt((sum_top / (double)predicted.size()) / sum_bot);
 }
 
+template <template <typename...> typename T>
+double mean(const T<double>& data)
+{
+    assert(!data.empty());
+    return std::accumulate(data.begin(), data.end(), 0.0) / data.size();
+}
+
+template <template <typename...> typename T>
+double variance(const T<double>& data)
+{
+    assert(!data.empty());
+    const double x_m = mean<T>(data);
+    auto lambda      = [x_m](double accum, double x) {
+        return accum + std::pow(x - x_m, 2.0);
+    };
+    return std::accumulate(data.begin(), data.end(), 0.0, lambda) /
+           data.size();
+}
+
+template <template <typename...> typename T>
+double sd(const T<double>& data)
+{
+    assert(!data.empty());
+    return std::sqrt(variance<T>(data));
+}
+
+// returns pdf value of x in normal distribution
+template <typename T>
+T normal_distribution(T mean, T sd, T x)
+{
+    static const T pi = std::acos(T(-1));
+    static const T m  = T(1) / std::sqrt(T(2) * pi);
+    return m *
+           std::exp(-std::pow(x - mean, T(2)) / (T(2) * std::pow(sd, T(2)))) /
+           sd;
+}
+
+// Arturs Zoldners pdf overlap function
+template <typename T>
+constexpr T az_pdf_overlap(
+        T mean1, T sd1, T n_samples1, T mean2, T sd2, T n_samples2)
+{
+    const T S   = 4.;  // integrate over range of 5 sigmas
+    const int P = 2 * 1024;
+
+    const T ww = n_samples1 + n_samples2;
+    const T v1 = n_samples1 / ww;
+    const T v2 = n_samples2 / ww;
+
+    const T x_min = std::min(mean1 - S * sd1, mean2 - S * sd2);
+    const T x_max = std::max(mean1 + S * sd1, mean2 + S * sd2);
+    const T dx    = x_max - x_min;
+
+    T ret = 0;
+
+    // #pragma omp simd reductions(+: ret)
+    for (int i = 0; i <= P; ++i) {
+        const T x  = (x_min * (P - i) + x_max * (i)) / P;
+        const T p1 = normal_distribution(mean1, sd1, x);
+        const T p2 = normal_distribution(mean2, sd2, x);
+        ret += (p1 * p2) / (v1 * p1 + v2 * p2);
+    }
+
+    return ret * dx / T(P);
+}
+
 }  // namespace rododendrs
