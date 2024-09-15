@@ -148,7 +148,10 @@ void sample_in(const TContainer& population,
 {
     assert(n > 0);
     assert(population.size() >= n);
-    assert(samples_idx.empty());
+
+#ifndef NDEBUG
+    const size_t initial_n_samples = samples_idx.size();
+#endif
 
     for (size_t i = 0; i < n; i++) {
         const size_t prev_n_samples = samples_idx.size();
@@ -159,7 +162,9 @@ void sample_in(const TContainer& population,
         } while (prev_n_samples == samples_idx.size());
     }
 
-    assert(samples_idx.size() == n);
+#ifndef NDEBUG
+    assert(samples_idx.size() == initial_n_samples + n);
+#endif
 }
 
 template <typename TContainer>
@@ -169,7 +174,10 @@ void sample_out(const TContainer& population,
 {
     assert(n > 0);
     assert(population.size() >= n);
-    assert(samples_idx.empty());
+
+#ifndef NDEBUG
+    const size_t initial_n_samples = samples_idx.size();
+#endif
 
     for (size_t i = 0; i < population.size(); i++) {
         samples_idx.insert(i);
@@ -185,7 +193,9 @@ void sample_out(const TContainer& population,
         } while (prev_n_samples == samples_idx.size());
     }
 
-    assert(samples_idx.size() == n);
+#ifndef NDEBUG
+    assert(samples_idx.size() == initial_n_samples + n);
+#endif
 }
 
 template <typename TContainer>
@@ -196,9 +206,9 @@ void sample(const TContainer& population,
     // see 'benchmarks/sampling_f' for how this ratio was found
     const double SAMPLE_RATIO_IN = 0.6;
 
-    const double sample_ratio = (double)population.size() / (double)n;
-    assert(sample_part > 0);
-    assert(sample_part <= 1.0);
+    const double sample_ratio = (double)n / (double)population.size();
+    assert(sample_ratio > 0);
+    assert(sample_ratio <= 1.0);
 
     if (sample_ratio <= SAMPLE_RATIO_IN) {
         return sample_in<TContainer>(population, samples_idx, n);
