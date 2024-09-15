@@ -1,18 +1,34 @@
 .PHONY: \
+	all \
+	benchmarks \
 	format \
 	format-cpp \
 	lint \
 	lint-cpp
 
+all: benchmarks
+
+benchmarks: sampling_f.o
+
+sampling_f.o: \
+		benchmarks/sampling_f/sampling_f.cpp
+	g++ -Wall -Wextra -Werror -Wpedantic \
+		-std=c++20 -O3 \
+		-I./include \
+		benchmarks/sampling_f/sampling_f.cpp -o $@
+
 format: format-cpp
 
-format-cpp: include/rododendrs.hpp
+format-cpp: \
+		include/rododendrs.hpp \
+		benchmarks/sampling_f/sampling_f.cpp
 	clang-format -i $^
 
 lint: lint-cpp
 
 lint-cpp: \
-		include/rododendrs.hpp
+		include/rododendrs.hpp \
+		benchmarks/sampling_f/sampling_f.cpp
 	cppcheck \
 		--enable=warning,portability,performance \
 		--enable=style,information \

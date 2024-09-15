@@ -5,6 +5,8 @@
 #include <deque>
 #include <mutex>
 #include <random>
+#include <set>
+#include <vector>
 
 namespace rododendrs {
 
@@ -137,6 +139,71 @@ constexpr T az_pdf_overlap(
     }
 
     return ret * dx / T(P);
+}
+
+template <typename TContainer>
+void sample_in(const TContainer& population,
+               std::set<size_t>& samples_idx,
+               size_t n)
+{
+    assert(n > 0);
+    assert(population.size() >= n);
+    assert(samples_idx.empty());
+
+    for (size_t i = 0; i < n; i++) {
+        const size_t prev_n_samples = samples_idx.size();
+        do {
+            const size_t sample_i =
+                    rododendrs::rnd_in_range(0, population.size());
+            samples_idx.insert(sample_i);
+        } while (prev_n_samples == samples_idx.size());
+    }
+
+    assert(samples_idx.size() == n);
+}
+
+template <typename TContainer>
+void sample_out(const TContainer& population,
+                std::set<size_t>& samples_idx,
+                size_t n)
+{
+    assert(n > 0);
+    assert(population.size() >= n);
+    assert(samples_idx.empty());
+
+    for (size_t i = 0; i < population.size(); i++) {
+        samples_idx.insert(i);
+    }
+    assert(samples_idx.size() == population.size());
+
+    for (size_t i = 0; i < population.size() - n; i++) {
+        const size_t prev_n_samples = samples_idx.size();
+        do {
+            const size_t sample_i =
+                    rododendrs::rnd_in_range(0, population.size());
+            samples_idx.erase(sample_i);
+        } while (prev_n_samples == samples_idx.size());
+    }
+
+    assert(samples_idx.size() == n);
+}
+
+template <typename TContainer>
+void sample(const TContainer& population,
+            std::set<size_t>& samples_idx,
+            size_t n)
+{
+    // see 'benchmarks/sampling_f' for how this ratio was found
+    const double SAMPLE_RATIO_IN = 0.6;
+
+    const double sample_ratio = (double)population.size() / (double)n;
+    assert(sample_part > 0);
+    assert(sample_part <= 1.0);
+
+    if (sample_ratio <= SAMPLE_RATIO_IN) {
+        return sample_in<TContainer>(population, samples_idx, n);
+    }
+    return sample_out<TContainer>(population, samples_idx, n);
 }
 
 }  // namespace rododendrs
