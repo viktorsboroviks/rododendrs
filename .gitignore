@@ -1,2 +1,6 @@
-**.txt
+cppcheck_report.txt
 **.o
+**.csv
+**.html
+venv
+vasarniica

@@ -4,11 +4,25 @@
 	format \
 	format-cpp \
 	lint \
-	lint-cpp
+	lint-cpp \
+	clean \
+	distclean
 
 all: benchmarks
 
-benchmarks: sampling_f.o
+venv: requirements.txt
+	python3 -m venv venv
+	./venv/bin/pip3 install --no-cache-dir --requirement requirements.txt
+
+vasarniica:
+	git clone git@github.com:viktorsboroviks/vasarniica.git
+	cd vasarniica; git checkout v1.5
+
+benchmarks: sampling_f.csv venv vasarniica
+	PYTHONPATH=${PYTHONPATH}:vasarniica/python ./venv/bin/python3 \
+		benchmarks/sampling_f/plot_sampling_f.py \
+		--input-csv sampling_f.csv \
+		--output-file result.html
 
 sampling_f.o: \
 		benchmarks/sampling_f/sampling_f.cpp
@@ -16,6 +30,9 @@ sampling_f.o: \
 		-std=c++20 -O3 \
 		-I./include \
 		benchmarks/sampling_f/sampling_f.cpp -o $@
+
+sampling_f.csv: sampling_f.o
+	./sampling_f.o > $@
 
 format: format-cpp
 
@@ -47,4 +64,10 @@ lint-cpp: \
 		$^
 
 clean:
-	rm -rfv *.txt
+	rm -rf *.o
+	rm -rf *.csv
+	rm -rf *.html
+
+distclean: clean
+	rm -rf venv
+	rm -rf vasarniica
