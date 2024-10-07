@@ -141,13 +141,10 @@ constexpr T az_pdf_overlap(
     return ret * dx / T(P);
 }
 
-template <typename TContainer>
-void sample_in(const TContainer& population,
-               std::set<size_t>& samples_idx,
-               size_t n)
+void sample_in(std::set<size_t>& samples_idx, size_t population_size, size_t n)
 {
     assert(n > 0);
-    assert(population.size() >= n);
+    assert(population_size >= n);
 
 #ifndef NDEBUG
     const size_t initial_n_samples = samples_idx.size();
@@ -157,7 +154,7 @@ void sample_in(const TContainer& population,
         const size_t prev_n_samples = samples_idx.size();
         do {
             const size_t sample_i =
-                    rododendrs::rnd_in_range(0, population.size());
+                    rododendrs::rnd_in_range(0, population_size);
             samples_idx.insert(sample_i);
         } while (prev_n_samples == samples_idx.size());
     }
@@ -167,53 +164,83 @@ void sample_in(const TContainer& population,
 #endif
 }
 
-template <typename TContainer>
-void sample_out(const TContainer& population,
-                std::set<size_t>& samples_idx,
+void sample_out(std::set<size_t>& samples_idx,
+                size_t population_size,
                 size_t n)
 {
     assert(n > 0);
-    assert(population.size() >= n);
+    assert(population_size >= n);
 
 #ifndef NDEBUG
     const size_t initial_n_samples = samples_idx.size();
 #endif
 
-    for (size_t i = 0; i < population.size(); i++) {
-        samples_idx.insert(i);
+    std::set<size_t> new_samples_idx;
+    for (size_t i = 0; i < population_size; i++) {
+        new_samples_idx.insert(i);
     }
-    assert(samples_idx.size() == population.size());
+    assert(new_samples_idx.size() == population_size);
 
-    for (size_t i = 0; i < population.size() - n; i++) {
-        const size_t prev_n_samples = samples_idx.size();
+    for (size_t i = 0; i < population_size - n; i++) {
+        const size_t prev_n_samples = new_samples_idx.size();
         do {
             const size_t sample_i =
-                    rododendrs::rnd_in_range(0, population.size());
-            samples_idx.erase(sample_i);
-        } while (prev_n_samples == samples_idx.size());
+                    rododendrs::rnd_in_range(0, population_size);
+            new_samples_idx.erase(sample_i);
+        } while (prev_n_samples == new_samples_idx.size());
     }
+
+    assert(new_samples_idx.size() == n);
+    samples_idx.insert(new_samples_idx.begin(), new_samples_idx.end());
 
 #ifndef NDEBUG
     assert(samples_idx.size() == initial_n_samples + n);
 #endif
 }
 
-template <typename TContainer>
-void sample(const TContainer& population,
-            std::set<size_t>& samples_idx,
-            size_t n)
+void sample_shuffle(std::set<size_t>& samples_idx,
+                    size_t population_size,
+                    size_t n)
+{
+    assert(n > 0);
+    assert(population_size >= n);
+    assert(samples_idx.empty());
+
+    std::vector<size_t> idx;
+    for (size_t i = 0; i < population_size; i++) {
+        idx.push_back(i);
+    }
+
+    // Create a random number generator
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::shuffle(idx.begin(), idx.end(), g);
+
+    for (size_t i = 0; i < n; i++) {
+        samples_idx.insert(idx[i]);
+    }
+
+    assert(samples_idx.size() == n);
+}
+
+void sample(std::set<size_t>& samples_idx, size_t population_size, size_t n)
 {
     // see 'benchmarks/sampling_f' for how this ratio was found
-    const double SAMPLE_RATIO_IN = 0.6;
+    const double SAMPLE_RATIO_IN      = 0.45;
+    const double SAMPLE_RATIO_SHUFFLE = 0.9;
 
-    const double sample_ratio = (double)n / (double)population.size();
+    const double sample_ratio = (double)n / (double)population_size;
     assert(sample_ratio > 0);
     assert(sample_ratio <= 1.0);
 
-    if (sample_ratio <= SAMPLE_RATIO_IN) {
-        return sample_in<TContainer>(population, samples_idx, n);
+    if (sample_ratio < SAMPLE_RATIO_IN) {
+        return sample_in(samples_idx, population_size, n);
     }
-    return sample_out<TContainer>(population, samples_idx, n);
+    else if (sample_ratio < SAMPLE_RATIO_SHUFFLE) {
+        return sample_shuffle(samples_idx, population_size, n);
+    }
+    return sample_out(samples_idx, population_size, n);
 }
 
 }  // namespace rododendrs
