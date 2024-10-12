@@ -40,6 +40,9 @@ public:
     }
 };
 
+// can be used as a rng in std::shuffle and similar calls
+inline auto rng = std::mt19937{std::random_device{}()};
+
 // global variable that holds the random state
 inline Random _g_random{};
 
@@ -60,19 +63,32 @@ double rnd_in_range(double min, double max)
     return retval;
 }
 
+// root mean squared error
+// correct data is also called observed data
+template <template <typename...> typename P, template <typename...> typename C>
+double rmse(const P<double>& predicted, const C<double>& correct)
+{
+    assert(!predicted.empty());
+    assert(predicted.size() == correct.size());
+    double sum = 0;
+    for (size_t i = 0; i < predicted.size(); i++) {
+        sum += std::pow(predicted[i] - correct[i], 2);
+    }
+    return std::sqrt(sum / (double)predicted.size());
+}
+
 // relative root mean squared error
+// correct data is also called observed data
 template <template <typename...> typename P, template <typename...> typename C>
 double rrmse(const P<double>& predicted, const C<double>& correct)
 {
     assert(!predicted.empty());
     assert(predicted.size() == correct.size());
-    double sum_top = 0;
-    double sum_bot = 0;
-    for (size_t i = 0; i < predicted.size(); i++) {
-        sum_top += std::pow(predicted[i] - correct[i], 2);
-        sum_bot += std::pow(correct[i], 2);
+    double sum_correct = 0;
+    for (size_t i = 0; i < correct.size(); i++) {
+        sum_correct += std::pow(correct[i], 2);
     }
-    return std::sqrt((sum_top / (double)predicted.size()) / sum_bot);
+    return rmse<P, C>(predicted, correct) / sum_correct;
 }
 
 template <template <typename...> typename T>
