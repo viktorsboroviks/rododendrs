@@ -63,6 +63,24 @@ double rnd_in_range(double min, double max)
     return retval;
 }
 
+// r-squared, coefficient of determination
+template <template <typename...> typename P, template <typename...> typename C>
+double r2(const P<double>& predicted, const C<double>& correct)
+{
+    assert(!predicted.empty());
+    assert(predicted.size() == correct.size());
+    const double mean_correct =
+            std::accumulate(correct.begin(), correct.end(), 0.0) /
+            correct.size();
+    double ssr = 0;
+    double sst = 0;
+    for (size_t i = 0; i < predicted.size(); i++) {
+        ssr += std::pow(correct[i] - predicted[i], 2);
+        sst += std::pow(correct[i] - mean_correct, 2);
+    }
+    return 1.0 - (ssr / sst);
+}
+
 // root mean squared error
 // correct data is also called observed data
 template <template <typename...> typename P, template <typename...> typename C>
