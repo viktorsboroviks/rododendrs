@@ -18,10 +18,12 @@ private:
     std::mutex mtx_rand;
     std::mt19937_64 rng;
     std::uniform_real_distribution<double> unif_dist;
+    std::normal_distribution<double> norm_dist;
 
 public:
-    Random() :
-        unif_dist(0.0, 1.0)
+    explicit Random(double norm_dist_mean = 0.0, double norm_dist_sd = 1.0) :
+        unif_dist(0.0, 1.0),
+        norm_dist(norm_dist_mean, norm_dist_sd)
     {
         // initialize the random number generator with time-dependent seed
         uint64_t timeSeed = std::chrono::high_resolution_clock::now()
@@ -37,6 +39,13 @@ public:
         // prevent data race between threads
         std::lock_guard<std::mutex> lock(mtx_rand);
         return unif_dist(rng);
+    }
+
+    double rnd_norm()
+    {
+        // prevent data race between threads
+        std::lock_guard<std::mutex> lock(mtx_rand);
+        return norm_dist(rng);
     }
 };
 
