@@ -20,7 +20,8 @@ private:
     std::uniform_real_distribution<double> unif_dist;
 
 public:
-    Random()
+    Random() :
+        unif_dist(0.0, 1.0)
     {
         // initialize the random number generator with time-dependent seed
         uint64_t timeSeed = std::chrono::high_resolution_clock::now()
@@ -29,7 +30,6 @@ public:
         std::seed_seq ss{uint32_t(timeSeed & 0xffffffff),
                          uint32_t(timeSeed >> 32)};
         rng.seed(ss);
-        std::uniform_real_distribution<double> unif(0, 1);
     }
 
     double rnd01()
@@ -81,10 +81,10 @@ double r2(const P<double>& predicted, const C<double>& correct)
     return 1.0 - (ssr / sst);
 }
 
-// root mean squared error
+// mean squared error
 // correct data is also called observed data
 template <template <typename...> typename P, template <typename...> typename C>
-double rmse(const P<double>& predicted, const C<double>& correct)
+double mse(const P<double>& predicted, const C<double>& correct)
 {
     assert(!predicted.empty());
     assert(predicted.size() == correct.size());
@@ -92,7 +92,15 @@ double rmse(const P<double>& predicted, const C<double>& correct)
     for (size_t i = 0; i < predicted.size(); i++) {
         sum += std::pow(predicted[i] - correct[i], 2);
     }
-    return std::sqrt(sum / (double)predicted.size());
+    return sum / static_cast<double>(predicted.size());
+}
+
+// root mean squared error
+// correct data is also called observed data
+template <template <typename...> typename P, template <typename...> typename C>
+double rmse(const P<double>& predicted, const C<double>& correct)
+{
+    return std::sqrt(mse<P, C>(predicted, correct));
 }
 
 // relative root mean squared error
@@ -264,7 +272,8 @@ void sample(std::set<size_t>& samples_idx, size_t population_size, size_t n)
     const double SAMPLE_RATIO_IN      = 0.45;
     const double SAMPLE_RATIO_SHUFFLE = 0.9;
 
-    const double sample_ratio = (double)n / (double)population_size;
+    const double sample_ratio =
+            static_cast<double>(n) / static_cast<double>(population_size);
     assert(sample_ratio > 0);
     assert(sample_ratio <= 1.0);
 
