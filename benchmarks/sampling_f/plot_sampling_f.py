@@ -8,7 +8,7 @@ parser.add_argument("--output-file", help="path to an output file")
 args = parser.parse_args()
 
 df = pd.read_csv(args.input_csv)
-df["runtime_per_sample_ns"] = df["avg_runtime_ns"]/df["samples_n"]
+df["runtime_per_sample_ns"] = df["avg_runtime_ns"] / df["samples_n"]
 df["samples_part"] = df["samples_n"] / df["population_size"]
 
 subplots = []
@@ -22,8 +22,12 @@ for population_size in set(df["population_size"]):
     for name in set(df["name"]):
         traces += [
             vplot.Scatter(
-                x=df.loc[(df["name"] == name) & (df["population_size"] == population_size)]["samples_part"],
-                y=df.loc[(df["name"] == name) & (df["population_size"] == population_size)]["avg_runtime_ns"],
+                x=df.loc[
+                    (df["name"] == name) & (df["population_size"] == population_size)
+                ]["samples_part"],
+                y=df.loc[
+                    (df["name"] == name) & (df["population_size"] == population_size)
+                ]["avg_runtime_ns"],
                 color=color.value,
                 mode="lines+markers",
                 marker_symbol=vplot.MarkerSymbol.CIRCLE,
@@ -33,13 +37,15 @@ for population_size in set(df["population_size"]):
         ]
         color = color.next()
 
-    subplots += [vplot.Subplot(
-        col=col,
-        row=row,
-        x_title="samples_part",
-        y_title="avg_runtime_ns",
-        traces=traces,
-    )]
+    subplots += [
+        vplot.Subplot(
+            col=col,
+            row=row,
+            x_title="samples_part",
+            y_title="avg_runtime_ns",
+            traces=traces,
+        )
+    ]
 
     row += 1
 
