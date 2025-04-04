@@ -10,66 +10,54 @@
 
 namespace rododendrs {
 
-class Random {
-    // thread-safe implementation of rnd01() borrowed from
-    // https://github.com/Arash-codedev/openGA/blob/master/README.md
-    // assuming those people knew what they were doing
-private:
-    std::mutex mtx_rand;
-    std::mt19937_64 rng;
-    std::uniform_real_distribution<double> unif_dist;
-    std::normal_distribution<double> norm_dist;
-
-public:
-    explicit Random(double norm_dist_mean = 0.0, double norm_dist_sd = 1.0) :
-        unif_dist(0.0, 1.0),
-        norm_dist(norm_dist_mean, norm_dist_sd)
-    {
-        // initialize the random number generator with time-dependent seed
-        uint64_t timeSeed = std::chrono::high_resolution_clock::now()
-                                    .time_since_epoch()
-                                    .count();
-        std::seed_seq ss{uint32_t(timeSeed & 0xffffffff),
-                         uint32_t(timeSeed >> 32)};
-        rng.seed(ss);
-    }
-
-    double rnd01()
-    {
-        // prevent data race between threads
-        std::lock_guard<std::mutex> lock(mtx_rand);
-        return unif_dist(rng);
-    }
-
-    double rnd_norm()
-    {
-        // prevent data race between threads
-        std::lock_guard<std::mutex> lock(mtx_rand);
-        return norm_dist(rng);
-    }
-};
-
 // can be used as a rng in std::shuffle and similar calls
 inline auto rng = std::mt19937{std::random_device{}()};
-
-// global variable that holds the random state
-inline Random _g_random{};
-
-double rnd01()
-{
-    return _g_random.rnd01();
-}
 
 double rnd_in_range(double min, double max)
 {
     if (min == max) {
         return min;
     }
-    assert(min < max);
-    const double retval = (_g_random.rnd01() * (max - min)) + min;
+    std::uniform_real_distribution<double> unif_dist(min, max);
+    const double retval = unif_dist(rng);
     assert(retval >= min);
     assert(retval <= max);
     return retval;
+}
+
+size_t rnd_in_range(size_t min, size_t max)
+{
+    if (min == max) {
+        return min;
+    }
+    std::uniform_int_distribution<size_t> unif_dist(min, max);
+    const double retval = unif_dist(rng);
+    assert(retval >= min);
+    assert(retval <= max);
+    return retval;
+}
+
+double rnd01()
+{
+    return rnd_in_range(0.0, 1.0);
+}
+
+double rnd_norm(double mean, double sd, double min, double max)
+{
+    if (min == max) {
+        return min;
+    }
+    std::normal_distribution<double> norm_dist(mean, sd);
+    const double retval = std::clamp(norm_dist(rng), min, max);
+    assert(retval >= min);
+    assert(retval <= max);
+    return retval;
+}
+
+// normal distribution with mean 0 and sd 1/3 in range [-1, 1]
+double rnd01_norm()
+{
+    return rnd_norm(0.0, 1.0/3.0, -1.0, 1.0);
 }
 
 // r-squared, coefficient of determination
