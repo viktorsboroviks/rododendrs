@@ -15,15 +15,20 @@ class Random {
     // https://github.com/Arash-codedev/openGA/blob/master/README.md
     // assuming those people knew what they were doing
 private:
-    std::mutex mtx_rand;
     std::mt19937_64 rng;
     std::uniform_real_distribution<double> unif_dist;
     std::normal_distribution<double> norm_dist;
+    double norm_dist_min;
+    double norm_dist_max;
 
 public:
-    explicit Random(double norm_dist_mean = 0.0, double norm_dist_sd = 1.0) :
+    std::mutex mtx_rand;
+
+    explicit Random(double norm_dist_mean = 0.0, double norm_dist_sd = 1.0/3.0, double norm_dist_min = -1.0, double norm_dist_max = 1.0) :
         unif_dist(0.0, 1.0),
-        norm_dist(norm_dist_mean, norm_dist_sd)
+        norm_dist(norm_dist_mean, norm_dist_sd),
+        norm_dist_min(norm_dist_min),
+        norm_dist_max(norm_dist_max)
     {
         // initialize the random number generator with time-dependent seed
         uint64_t timeSeed = std::chrono::high_resolution_clock::now()
@@ -41,11 +46,12 @@ public:
         return unif_dist(rng);
     }
 
-    double rnd_norm()
+    // returns a random number from normal distribution in range [-1, 1]
+    double rnd01_norm()
     {
         // prevent data race between threads
         std::lock_guard<std::mutex> lock(mtx_rand);
-        return norm_dist(rng);
+        return std::clamp(norm_dist(rng), norm_dist_min, norm_dist_max);
     }
 };
 
@@ -60,13 +66,32 @@ double rnd01()
     return _g_random.rnd01();
 }
 
+double rnd01_norm()
+{
+    return _g_random.rnd01_norm();
+}
+
 double rnd_in_range(double min, double max)
 {
     if (min == max) {
         return min;
     }
-    assert(min < max);
-    const double retval = (_g_random.rnd01() * (max - min)) + min;
+    std::uniform_real_distribution<double> unif_dist(min, max);
+    std::lock_guard<std::mutex> lock(_g_random.mtx_rand);
+    const double retval = unif_dist(rng);
+    assert(retval >= min);
+    assert(retval <= max);
+    return retval;
+}
+
+size_t rnd_in_range(size_t min, size_t max)
+{
+    if (min == max) {
+        return min;
+    }
+    std::uniform_int_distribution<size_t> unif_dist(min, max);
+    std::lock_guard<std::mutex> lock(_g_random.mtx_rand);
+    const double retval = unif_dist(rng);
     assert(retval >= min);
     assert(retval <= max);
     return retval;
