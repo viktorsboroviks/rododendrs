@@ -283,4 +283,56 @@ void sample(std::set<size_t>& samples_idx, size_t population_size, size_t n)
     return sample_out(samples_idx, population_size, n);
 }
 
+// Welford's online algorithms
+// ref: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+
+double welford_mean(double prev_mean, double value, size_t n)
+{
+    assert(n > 0);
+    return prev_mean + (value - prev_mean) / static_cast<double>(n);
+}
+
+double welford_m2(double m2_prev, double prev_mean, double value, size_t n)
+{
+    assert(n > 0);
+    if (n == 1) {
+        return 0;
+    }
+
+    const double mean = welford_mean(prev_mean, value, n);
+    const double m2   = m2_prev + (value - prev_mean) * (value - mean);
+    return m2;
+}
+
+double welford_variance(double m2, size_t n)
+{
+    assert(n > 0);
+    return m2 / static_cast<double>(n - 1);
+}
+
+double confidence_interval_margin(double sd, size_t n, double z)
+{
+    assert(n > 0);
+    return std::abs(z * sd / std::sqrt(static_cast<double>(n)));
+}
+
+std::pair<double, double> confidence_interval(double mean,
+                                              double sd,
+                                              size_t n,
+                                              double z = 1.96)
+{
+    assert(n > 0);
+    const double margin = confidence_interval_margin(sd, n, z);
+    return std::make_pair(mean - margin, mean + margin);
+}
+
+// z values
+// ref:
+// https://www.researchgate.net/figure/Critical-z-values-used-in-the-calculation-of-confidence-intervals_tbl1_320742650
+const double Z_CI_50PCT = 0.67449;
+const double Z_CI_75PCT = 1.15035;
+const double Z_CI_90PCT = 1.64485;
+const double Z_CI_95PCT = 1.95996;
+const double Z_CI_99PCT = 2.57583;
+
 }  // namespace rododendrs
