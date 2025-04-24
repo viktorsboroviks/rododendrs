@@ -335,4 +335,56 @@ const double Z_CI_90PCT = 1.64485;
 const double Z_CI_95PCT = 1.95996;
 const double Z_CI_99PCT = 2.57583;
 
+class SMA {
+private:
+    size_t _period;
+    double _sum = 0;
+    std::deque<double> _values;
+
+public:
+    SMA(size_t period) :
+        _period(period)
+    {
+        assert(_period > 0);
+    }
+
+    size_t size() const
+    {
+        assert(_values.size() <= _period);
+        return _values.size();
+    }
+
+    size_t period() const
+    {
+        return _period;
+    }
+
+    void insert(double value)
+    {
+        _values.push_back(value);
+
+        if (_values.size() == _period) {
+            assert(_sum == 0);
+            for (const auto& value : _values) {
+                _sum += value;
+            }
+        }
+
+        if (_values.size() > _period) {
+            _sum -= _values.front();
+            _values.pop_front();
+            _sum += value;
+        }
+    }
+
+    double get() const
+    {
+        if (_values.size() < _period) {
+            return 0;
+        }
+        assert(_values.size() == _period);
+        return _sum / static_cast<double>(_period);
+    }
+};
+
 }  // namespace rododendrs
