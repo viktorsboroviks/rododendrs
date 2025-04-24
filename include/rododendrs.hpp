@@ -57,7 +57,7 @@ double rnd_norm(double mean, double sd, double min, double max)
 // normal distribution with mean 0 and sd 1/3 in range [-1, 1]
 double rnd01_norm()
 {
-    return rnd_norm(0.0, 1.0/3.0, -1.0, 1.0);
+    return rnd_norm(0.0, 1.0 / 3.0, -1.0, 1.0);
 }
 
 // r-squared, coefficient of determination
@@ -357,6 +357,11 @@ public:
     size_t period() const
     {
         return _period;
+    }
+
+    bool ready() const
+    {
+        return size() == period();
     }
 
     void insert(double value)
