@@ -3,11 +3,11 @@
 #include <cassert>
 #include <cmath>
 #include <deque>
+#include <limits>
 #include <mutex>
 #include <random>
 #include <set>
 #include <vector>
-#include <limits>
 
 namespace rododendrs {
 
@@ -417,8 +417,11 @@ private:
         assert(_sorted_indices.size() == _values.size());
 
         // sort
-        std::sort(_sorted_indices.begin(), _sorted_indices.end(),
-              [&_values](size_t i1, size_t i2) { return _values[i1] < _values[i2]; });
+        std::sort(_sorted_indices.begin(),
+                  _sorted_indices.end(),
+                  [this](size_t i1, size_t i2) {
+                      return _values[i1] < _values[i2];
+                  });
     }
 
 public:
@@ -429,19 +432,47 @@ public:
         _sorted_indices.reserve(max_size);
     }
 
+    // Custom Copy Constructor
+    Population(const Population& other) :
+        _values(other._values),
+        _sorted_indices(other._sorted_indices),
+        _sum(other._sum),
+        _min(other._min),
+        _max(other._max)
+    {
+        // _mutex is default-initialized for the new object
+    }
+
+    // Custom Copy Assignment Operator
+    Population& operator=(const Population& other)
+    {
+        if (this != &other) {
+            // Lock both mutexes to ensure thread safety during the copy
+            std::lock_guard<std::mutex> lock_this(_mutex);
+
+            _values         = other._values;
+            _sorted_indices = other._sorted_indices;
+            _sum            = other._sum;
+            _min            = other._min;
+            _max            = other._max;
+
+            // _mutex is not copied; it remains unique to this object
+        }
+        return *this;
+    }
+
     void reset()
     {
         std::lock_guard<std::mutex> lock(_mutex);
         _values.clear();
         _sorted_indices.clear();
         _sum = 0;
-        _min  = -1.0;
-        _max  = -1.0;
+        _min = -1.0;
+        _max = -1.0;
     }
 
     std::vector<double> values() const
     {
-        std::lock_guard<std::mutex> lock(_mutex);
         return _values;
     }
 
@@ -536,20 +567,20 @@ public:
         cdf.unique_values.reserve(_values.size());
         cdf.p.reserve(_values.size());
 
-        double p = 0.0;
+        double p            = 0.0;
         const double p_diff = 1.0 / static_cast<double>(_values.size());
 
         for (size_t i = 0; i < _values.size(); i++) {
             const size_t i_sorted = _sorted_indices[i];
-            const double v = _values[i_sorted];
+            const double v        = _values[i_sorted];
             p += p_diff;
 
             // if new value
-            if (cdf.unique_values.empty() ||
-                cdf.unique_values.back() != v) {
+            if (cdf.unique_values.empty() || cdf.unique_values.back() != v) {
                 cdf.unique_values.push_back(v);
                 cdf.p.push_back(p);
-            } else {
+            }
+            else {
                 // same value
                 // only update p
                 cdf.p.back() = p;
@@ -563,8 +594,8 @@ public:
 
 double kstest(const CDF& cdf_a, const CDF& cdf_b)
 {
-    assert(!cdf_a.empty());
-    assert(!cdf_b.empty());
+    assert(!cdf_a.p.empty());
+    assert(!cdf_b.p.empty());
     assert(cdf_a.unique_values.size() == cdf_a.p.size());
     assert(cdf_b.unique_values.size() == cdf_b.p.size());
 
@@ -572,24 +603,23 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
 
     size_t ia_next = 0;
     size_t ib_next = 0;
-    double va = 0;
-    double vb = 0;
-    double pa = 0;
-    double pb = 0;
+    double pa      = 0;
+    double pb      = 0;
 
     while (true) {
         // select points
-        if (ia_next < cdf_a.p.size() && cdf_a.unique_values[ia_next] < cdf_b.unique_values[ib_next]) {
+        if (ia_next < cdf_a.p.size() &&
+            cdf_a.unique_values[ia_next] < cdf_b.unique_values[ib_next]) {
             // a point available and a < b
-            va = cdf_a.unique_values[ia_next];
             pa = cdf_a.p[ia_next];
             ia_next++;
-        } else if (ib_next < cdf_b.p.size()) {
+        }
+        else if (ib_next < cdf_b.p.size()) {
             // b point available and b <= a
-            vb = cdf_b.unique_values[ib_next];
             pb = cdf_a.p[ia_next];
             ib_next++;
-        } else {
+        }
+        else {
             // no points available
             return ret;
         }
