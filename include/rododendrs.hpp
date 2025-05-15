@@ -1,13 +1,26 @@
 #pragma once
 
+//#define RDDR_LOCK
+//#define RDDR_DEBUG
+
 #include <cassert>
 #include <cmath>
 #include <deque>
 #include <limits>
-#include <mutex>
 #include <random>
 #include <set>
 #include <vector>
+#ifdef RDDR_LOCK
+#include <mutex>
+#endif
+
+#ifdef RDDR_DEBUG
+#define debug_rddr(x)                                                   \
+    std::cout << "debug (" << __FILE__ << ":" << __LINE__ << "): " << x \
+              << std::endl;
+#else
+#define debug_rddr(x) while (0)
+#endif
 
 namespace rododendrs {
 
@@ -317,14 +330,19 @@ double confidence_interval_margin(double sd, size_t n, double z)
     return std::abs(z * sd / std::sqrt(static_cast<double>(n)));
 }
 
-std::pair<double, double> confidence_interval(double mean,
-                                              double sd,
-                                              size_t n,
-                                              double z = 1.96)
+struct ConfidenceInterval {
+    double lower;
+    double upper;
+};
+
+ConfidenceInterval confidence_interval(double mean,
+                                       double sd,
+                                       size_t n,
+                                       double z = 1.96)
 {
     assert(n > 0);
     const double margin = confidence_interval_margin(sd, n, z);
-    return std::make_pair(mean - margin, mean + margin);
+    return ConfidenceInterval{mean - margin, mean + margin};
 }
 
 // z values
@@ -400,8 +418,11 @@ struct CDF {
 
 class Population {
 private:
+#ifdef RDDR_LOCK
     std::mutex _mutex;
+#endif
 
+    size_t _max_size = 0;
     std::vector<double> _values;
     std::vector<double> _sorted_indices;
     double _sum = 0;
@@ -411,6 +432,7 @@ private:
     void _sort_indices()
     {
         // init
+        _sorted_indices.resize(_values.size());
         for (size_t i = 0; i < _values.size(); i++) {
             _sorted_indices[i] = i;
         }
@@ -425,13 +447,18 @@ private:
     }
 
 public:
-    Population(size_t max_size)
+    Population(size_t max_size) : _max_size(max_size)
     {
-        assert(max_size > 0);
-        _values.reserve(max_size);
-        _sorted_indices.reserve(max_size);
+        assert(_max_size > 0);
+
+        _values.reserve(_max_size);
+        _sorted_indices.reserve(_max_size);
+
+        assert(_values.empty());
+        assert(_sorted_indices.empty());
     }
 
+#ifdef RDDR_LOCK
     // Custom Copy Constructor
     Population(const Population& other) :
         _values(other._values),
@@ -442,7 +469,9 @@ public:
     {
         // _mutex is default-initialized for the new object
     }
+#endif
 
+#ifdef RDDR_LOCK
     // Custom Copy Assignment Operator
     Population& operator=(const Population& other)
     {
@@ -460,15 +489,23 @@ public:
         }
         return *this;
     }
+#endif
 
     void reset()
     {
+#ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
+#endif
         _values.clear();
+        _values.reserve(_max_size);
         _sorted_indices.clear();
+        _sorted_indices.reserve(_max_size);
         _sum = 0;
         _min = -1.0;
         _max = -1.0;
+
+        assert(_values.empty());
+        assert(_sorted_indices.empty());
     }
 
     std::vector<double> values() const
@@ -478,7 +515,9 @@ public:
 
     void insert(double value)
     {
+#ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
+#endif
         // do not use dynamic allocation to improve performance
         assert(_values.size() < _values.capacity());
         _values.push_back(value);
@@ -525,19 +564,24 @@ public:
 
     double mean()
     {
+#ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
+#endif
         assert(_values.size() > 0);
         return _sum / static_cast<double>(_values.size());
     }
 
     double median()
     {
+#ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
+#endif
         assert(_values.size() > 0);
         if (_sorted_indices.size() < _values.size()) {
             _sort_indices();
         }
         assert(_sorted_indices.size() == _values.size());
+        assert(_values.size() > 0);
 
         // ref: https://en.wikipedia.org/wiki/Median
         // odd number
@@ -556,12 +600,15 @@ public:
 
     CDF cdf()
     {
+#ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
+#endif
         assert(_values.size() > 0);
         if (_sorted_indices.size() < _values.size()) {
             _sort_indices();
         }
         assert(_sorted_indices.size() == _values.size());
+        assert(_values.size() > 0);
 
         CDF cdf;
         cdf.unique_values.reserve(_values.size());
@@ -587,6 +634,7 @@ public:
             }
         }
 
+        assert(cdf.p.back() > 0);
         assert(1.0 - cdf.p.back() < 1.0e-3);
         return cdf;
     }
@@ -606,22 +654,24 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
     double pa      = 0;
     double pb      = 0;
 
-    while (true) {
-        // select points
-        if (ia_next < cdf_a.p.size() &&
-            cdf_a.unique_values[ia_next] < cdf_b.unique_values[ib_next]) {
-            // a point available and a < b
-            pa = cdf_a.p[ia_next];
-            ia_next++;
-        }
-        else if (ib_next < cdf_b.p.size()) {
-            // b point available and b <= a
-            pb = cdf_a.p[ia_next];
-            ib_next++;
-        }
-        else {
-            // no points available
-            return ret;
+    // loop until both cdfs are exhausted
+    while (ia_next < cdf_a.p.size() && ib_next < cdf_b.p.size()) {
+        // select candidates
+        const double pa_candidate = cdf_a.unique_values[ia_next] ? ia_next < cdf_a.p.size() : pa;
+        const double pb_candidate = cdf_a.unique_values[ia_next] ? ia_next < cdf_a.p.size() : pa;
+
+        // compare candidates
+        // advance
+        if (pa_candidate < pb_candidate) {
+            pa = pa_candidate;
+            if (ia_next < cdf_a.p.size()) {
+                ia_next++;
+            }
+        } else {
+            pb = pb_candidate;
+            if (ib_next < cdf_b.p.size()) {
+                ib_next++;
+            }
         }
 
         // get kstest
@@ -632,9 +682,10 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
         // abort if remaining points cannot produce higher kstest value
         const double max_ret = 1.0 - std::min(pa, pb);
         if (max_ret < ret) {
-            return ret;
+            break;
         }
     }
+    return ret;
 }
 
 }  // namespace rododendrs
