@@ -1,7 +1,7 @@
 #pragma once
 
-//#define RDDR_LOCK
-//#define RDDR_DEBUG
+// #define RDDR_LOCK
+// #define RDDR_DEBUG
 
 #include <cassert>
 #include <cmath>
@@ -429,25 +429,9 @@ private:
     double _min = -1.0;
     double _max = -1.0;
 
-    void _sort_indices()
-    {
-        // init
-        _sorted_indices.resize(_values.size());
-        for (size_t i = 0; i < _values.size(); i++) {
-            _sorted_indices[i] = i;
-        }
-        assert(_sorted_indices.size() == _values.size());
-
-        // sort
-        std::sort(_sorted_indices.begin(),
-                  _sorted_indices.end(),
-                  [this](size_t i1, size_t i2) {
-                      return _values[i1] < _values[i2];
-                  });
-    }
-
 public:
-    Population(size_t max_size) : _max_size(max_size)
+    Population(size_t max_size) :
+        _max_size(max_size)
     {
         assert(_max_size > 0);
 
@@ -518,9 +502,20 @@ public:
 #ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
-        // do not use dynamic allocation to improve performance
         assert(_values.size() < _values.capacity());
+
+        const size_t i_new = _values.size() - 1;
+        auto it            = std::lower_bound(
+                _sorted_indices.begin(),
+                _sorted_indices.end(),
+                i_new,
+                [&](size_t a, size_t b) { return _values[a] < _values[b]; });
+
+        _sorted_indices.insert(it, i_new);
         _values.push_back(value);
+        assert(_values.size() > 0);
+        assert(_sorted_indices.size() == _values.size());
+
         // TODO: mind potential overflow
         //       risk too low to address now
         _sum += value;
@@ -576,12 +571,6 @@ public:
 #ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
-        assert(_values.size() > 0);
-        if (_sorted_indices.size() < _values.size()) {
-            _sort_indices();
-        }
-        assert(_sorted_indices.size() == _values.size());
-        assert(_values.size() > 0);
 
         // ref: https://en.wikipedia.org/wiki/Median
         // odd number
@@ -603,13 +592,6 @@ public:
 #ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
-        assert(_values.size() > 0);
-        if (_sorted_indices.size() < _values.size()) {
-            _sort_indices();
-        }
-        assert(_sorted_indices.size() == _values.size());
-        assert(_values.size() > 0);
-
         CDF cdf;
         cdf.unique_values.reserve(_values.size());
         cdf.p.reserve(_values.size());
@@ -621,6 +603,7 @@ public:
             const size_t i_sorted = _sorted_indices[i];
             const double v        = _values[i_sorted];
             p += p_diff;
+            assert(p >= 0);
 
             // if new value
             if (cdf.unique_values.empty() || cdf.unique_values.back() != v) {
@@ -634,6 +617,7 @@ public:
             }
         }
 
+        assert(cdf.unique_values.size() == cdf.p.size());
         assert(cdf.p.back() > 0);
         assert(1.0 - cdf.p.back() < 1.0e-3);
         return cdf;
@@ -653,22 +637,35 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
     size_t ib_next = 0;
     double pa      = 0;
     double pb      = 0;
+    double va      = cdf_a.unique_values[0];
+    double vb      = cdf_b.unique_values[0];
 
     // loop until both cdfs are exhausted
     while (ia_next < cdf_a.p.size() && ib_next < cdf_b.p.size()) {
         // select candidates
-        const double pa_candidate = cdf_a.unique_values[ia_next] ? ia_next < cdf_a.p.size() : pa;
-        const double pb_candidate = cdf_a.unique_values[ia_next] ? ia_next < cdf_a.p.size() : pa;
+        const double va_candidate = ia_next < cdf_a.unique_values.size()
+                                            ? cdf_a.unique_values[ia_next]
+                                            : va;
+        const double vb_candidate = ib_next < cdf_b.unique_values.size()
+                                            ? cdf_b.unique_values[ib_next]
+                                            : vb;
+        assert(va_candidate >= va);
+        assert(vb_candidate >= vb);
 
         // compare candidates
         // advance
-        if (pa_candidate < pb_candidate) {
-            pa = pa_candidate;
+        if (va_candidate < vb_candidate) {
+            assert(pa <= cdf_a.p[ia_next]);
+            va = va_candidate;
+            pa = cdf_a.p[ia_next];
             if (ia_next < cdf_a.p.size()) {
                 ia_next++;
             }
-        } else {
-            pb = pb_candidate;
+        }
+        else {
+            assert(pb <= cdf_b.p[ib_next]);
+            va = vb_candidate;
+            pb = cdf_b.p[ib_next];
             if (ib_next < cdf_b.p.size()) {
                 ib_next++;
             }
