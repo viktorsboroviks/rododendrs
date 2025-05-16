@@ -502,14 +502,17 @@ public:
 #ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
+        assert(_values.size() == _sorted_indices.size());
         assert(_values.size() < _values.capacity());
+        assert(_sorted_indices.size() < _sorted_indices.capacity());
 
-        const size_t i_new = _values.size() - 1;
-        auto it            = std::lower_bound(
-                _sorted_indices.begin(),
-                _sorted_indices.end(),
-                i_new,
-                [&](size_t a, size_t b) { return _values[a] < _values[b]; });
+        const size_t i_new = _values.size();
+        auto it            = std::lower_bound(_sorted_indices.begin(),
+                                   _sorted_indices.end(),
+                                   value,
+                                   [&](size_t i, double new_value) {
+                                       return _values[i] < new_value;
+                                   });
 
         _sorted_indices.insert(it, i_new);
         _values.push_back(value);
@@ -592,6 +595,9 @@ public:
 #ifdef RDDR_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
+        assert(!_sorted_indices.empty());
+        assert(_values.size() == _sorted_indices.size());
+
         CDF cdf;
         cdf.unique_values.reserve(_values.size());
         cdf.p.reserve(_values.size());
@@ -599,9 +605,19 @@ public:
         double p            = 0.0;
         const double p_diff = 1.0 / static_cast<double>(_values.size());
 
+#ifndef NDEBUG
+        double prev_v = _values[_sorted_indices[0]];
+#endif
         for (size_t i = 0; i < _values.size(); i++) {
+            assert(i < _sorted_indices.size());
             const size_t i_sorted = _sorted_indices[i];
-            const double v        = _values[i_sorted];
+            assert(i_sorted < _values.size());
+            const double v = _values[i_sorted];
+#ifndef NDEBUG
+            assert(v >= prev_v);
+            prev_v = v;
+#endif
+
             p += p_diff;
             assert(p >= 0);
 
