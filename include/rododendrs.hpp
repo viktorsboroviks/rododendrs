@@ -51,6 +51,11 @@ size_t rnd_in_range(size_t min, size_t max)
     return retval;
 }
 
+double rnd01()
+{
+    return rnd_in_range(0.0, 1.0);
+}
+
 // changes val by a random step in defined range
 template <typename T>
 T rnd_step(T val, T step_min, T step_max, T min, T max)
@@ -63,11 +68,6 @@ T rnd_step(T val, T step_min, T step_max, T min, T max)
     }
 
     return std::clamp(val + step, min, max);
-}
-
-double rnd01()
-{
-    return rnd_in_range(0.0, 1.0);
 }
 
 double rnd_norm(double mean, double sd, double min, double max)
