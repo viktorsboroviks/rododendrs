@@ -51,6 +51,20 @@ size_t rnd_in_range(size_t min, size_t max)
     return retval;
 }
 
+// changes val by a random step in defined range
+template <typename T>
+T rnd_step(T val, T step_min, T step_max, T min, T max)
+{
+    assert(step_min <= step_max);
+    assert(min <= max);
+    T step = rododendrs::rnd_in_range(step_min, step_max);
+    if (rododendrs::rnd01() < 0.5) {
+        step *= -1;
+    }
+
+    return std::clamp(val + step, min, max);
+}
+
 double rnd01()
 {
     return rnd_in_range(0.0, 1.0);
