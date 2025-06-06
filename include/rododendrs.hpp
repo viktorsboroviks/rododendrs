@@ -27,33 +27,45 @@ namespace rododendrs {
 // can be used as a rng in std::shuffle and similar calls
 inline auto rng = std::mt19937{std::random_device{}()};
 
-double rnd_in_range(double min, double max)
+template <typename T>
+struct Range {
+    T min;
+    T max;
+    T step_min;
+    T step_max;
+};
+
+template <typename T>
+T rnd_in_range(T min, T max)
 {
     if (min == max) {
         return min;
     }
-    std::uniform_real_distribution<double> unif_dist(min, max);
-    const double retval = unif_dist(rng);
+
+    if constexpr (std::is_integral_v<T>) {
+        std::uniform_int_distribution<T> unif_dist(min, max);
+        const T retval = unif_dist(rng);
+        assert(retval >= min);
+        assert(retval <= max);
+        return retval;
+    }
+
+    std::uniform_real_distribution<T> unif_dist(min, max);
+    const T retval = unif_dist(rng);
     assert(retval >= min);
     assert(retval <= max);
     return retval;
 }
 
-size_t rnd_in_range(size_t min, size_t max)
+template <typename T>
+T rnd_in_range(const Range<T>& range)
 {
-    if (min == max) {
-        return min;
-    }
-    std::uniform_int_distribution<size_t> unif_dist(min, max);
-    const double retval = unif_dist(rng);
-    assert(retval >= min);
-    assert(retval <= max);
-    return retval;
+    return rnd_in_range<T>(range.min, range.max);
 }
 
 double rnd01()
 {
-    return rnd_in_range(0.0, 1.0);
+    return rnd_in_range<double>(0.0, 1.0);
 }
 
 // changes val by a random step in defined range
@@ -62,12 +74,18 @@ T rnd_step(T val, T step_min, T step_max, T min, T max)
 {
     assert(step_min <= step_max);
     assert(min <= max);
-    T step = rododendrs::rnd_in_range(step_min, step_max);
+    T step = rododendrs::rnd_in_range<T>(step_min, step_max);
     if (rododendrs::rnd01() < 0.5) {
         step *= -1;
     }
 
     return std::clamp(val + step, min, max);
+}
+
+template <typename T>
+T rnd_step(T val, const Range<T>& range)
+{
+    return rnd_step(val, range.step_min, range.step_max, range.min, range.max);
 }
 
 double rnd_norm(double mean, double sd, double min, double max)
@@ -221,7 +239,7 @@ void sample_in(std::set<size_t>& samples_idx, size_t population_size, size_t n)
         const size_t prev_n_samples = samples_idx.size();
         do {
             const size_t sample_i =
-                    rododendrs::rnd_in_range(0, population_size);
+                    rododendrs::rnd_in_range<size_t>(0, population_size);
             samples_idx.insert(sample_i);
         } while (prev_n_samples == samples_idx.size());
     }
@@ -252,7 +270,7 @@ void sample_out(std::set<size_t>& samples_idx,
         const size_t prev_n_samples = new_samples_idx.size();
         do {
             const size_t sample_i =
-                    rododendrs::rnd_in_range(0, population_size);
+                    rododendrs::rnd_in_range<size_t>(0, population_size);
             new_samples_idx.erase(sample_i);
         } while (prev_n_samples == new_samples_idx.size());
     }
