@@ -49,12 +49,13 @@ T rnd_in_range(T min, T max)
         assert(retval <= max);
         return retval;
     }
-
-    std::uniform_real_distribution<T> unif_dist(min, max);
-    const T retval = unif_dist(rng);
-    assert(retval >= min);
-    assert(retval <= max);
-    return retval;
+    else {
+        std::uniform_real_distribution<T> unif_dist(min, max);
+        const T retval = unif_dist(rng);
+        assert(retval >= min);
+        assert(retval <= max);
+        return retval;
+    }
 }
 
 template <typename T>
