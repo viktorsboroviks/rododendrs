@@ -1,6 +1,7 @@
 #pragma once
 
-// #define RDDR_LOCK
+#define G_RNG_LOCK
+// #define POPULATION_LOCK
 // #define RDDR_DEBUG
 
 #include <cassert>
@@ -10,7 +11,7 @@
 #include <random>
 #include <set>
 #include <vector>
-#ifdef RDDR_LOCK
+#if defined(G_RNG_LOCK) || defined(POPULATION_LOCK)
 #include <mutex>
 #endif
 
@@ -27,6 +28,10 @@ namespace rododendrs {
 // can be used as a rng in std::shuffle and similar calls
 inline auto rng = std::mt19937{std::random_device{}()};
 
+#ifdef G_RNG_LOCK
+std::mutex g_rng_mutex;
+#endif
+
 template <typename T>
 struct Range {
     T min;
@@ -41,7 +46,9 @@ T rnd_in_range(T min, T max)
     if (min == max) {
         return min;
     }
-
+#ifdef G_RNG_LOCK
+    std::lock_guard<std::mutex> lock(g_rng_mutex);
+#endif
     if constexpr (std::is_integral_v<T>) {
         std::uniform_int_distribution<T> unif_dist(min, max);
         const T retval = unif_dist(rng);
@@ -94,6 +101,9 @@ double rnd_norm(double mean, double sd, double min, double max)
     if (min == max) {
         return min;
     }
+#ifdef G_RNG_LOCK
+    std::lock_guard<std::mutex> lock(g_rng_mutex);
+#endif
     std::normal_distribution<double> norm_dist(mean, sd);
     const double retval = std::clamp(norm_dist(rng), min, max);
     assert(retval >= min);
@@ -451,7 +461,7 @@ struct CDF {
 
 class Population {
 private:
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
     std::mutex _mutex;
 #endif
 
@@ -475,7 +485,7 @@ public:
         assert(_sorted_indices.empty());
     }
 
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
     // Custom Copy Constructor
     Population(const Population& other) :
         _values(other._values),
@@ -488,13 +498,13 @@ public:
     }
 #endif
 
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
     // Custom Copy Assignment Operator
     Population& operator=(const Population& other)
     {
         if (this != &other) {
             // Lock both mutexes to ensure thread safety during the copy
-            std::lock_guard<std::mutex> lock_this(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
 
             _values         = other._values;
             _sorted_indices = other._sorted_indices;
@@ -510,7 +520,7 @@ public:
 
     void reset()
     {
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
         _values.clear();
@@ -532,7 +542,7 @@ public:
 
     void insert(double value)
     {
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
         assert(_values.size() == _sorted_indices.size());
@@ -595,7 +605,7 @@ public:
 
     double mean()
     {
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
         assert(_values.size() > 0);
@@ -604,7 +614,7 @@ public:
 
     double median()
     {
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
 
@@ -625,7 +635,7 @@ public:
 
     CDF cdf()
     {
-#ifdef RDDR_LOCK
+#ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
         assert(!_sorted_indices.empty());
