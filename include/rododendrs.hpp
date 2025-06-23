@@ -468,7 +468,8 @@ private:
     size_t _max_size = 0;
     std::vector<double> _values;
     std::vector<double> _sorted_indices;
-    double _sum = 0;
+
+    double _mean = 0.0;
     double _min = -1.0;
     double _max = -1.0;
 
@@ -490,7 +491,7 @@ public:
     Population(const Population& other) :
         _values(other._values),
         _sorted_indices(other._sorted_indices),
-        _sum(other._sum),
+        _mean(other._mean),
         _min(other._min),
         _max(other._max)
     {
@@ -508,7 +509,7 @@ public:
 
             _values         = other._values;
             _sorted_indices = other._sorted_indices;
-            _sum            = other._sum;
+            _mean           = other._mean;
             _min            = other._min;
             _max            = other._max;
 
@@ -527,7 +528,7 @@ public:
         _values.reserve(_max_size);
         _sorted_indices.clear();
         _sorted_indices.reserve(_max_size);
-        _sum = 0;
+        _mean = 0.0;
         _min = -1.0;
         _max = -1.0;
 
@@ -562,9 +563,7 @@ public:
         assert(_values.size() > 0);
         assert(_sorted_indices.size() == _values.size());
 
-        // TODO: mind potential overflow
-        //       risk too low to address now
-        _sum += value;
+        _mean = welford_mean(_mean, value, _values.size());
 
         if (_values.size() == 1) {
             assert(_min == -1.0);
@@ -605,11 +604,7 @@ public:
 
     double mean()
     {
-#ifdef POPULATION_LOCK
-        std::lock_guard<std::mutex> lock(_mutex);
-#endif
-        assert(_values.size() > 0);
-        return _sum / static_cast<double>(_values.size());
+        return _mean;
     }
 
     double median()
