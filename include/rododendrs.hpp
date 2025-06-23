@@ -587,6 +587,11 @@ public:
         return _values.size();
     }
 
+    bool empty() const
+    {
+        return _values.empty();
+    }
+
     size_t capacity() const
     {
         return _values.capacity();
