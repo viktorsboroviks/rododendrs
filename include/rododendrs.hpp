@@ -466,30 +466,31 @@ private:
 #endif
 
     size_t _max_size = 0;
-    std::vector<double> _values;
     std::vector<double> _sorted_indices;
 
     double _mean = 0.0;
-    double _min = -1.0;
-    double _max = -1.0;
+    double _min  = -1.0;
+    double _max  = -1.0;
 
 public:
+    std::vector<double> values;
+
     Population(size_t max_size) :
         _max_size(max_size)
     {
         assert(_max_size > 0);
 
-        _values.reserve(_max_size);
+        values.reserve(_max_size);
         _sorted_indices.reserve(_max_size);
 
-        assert(_values.empty());
+        assert(values.empty());
         assert(_sorted_indices.empty());
     }
 
 #ifdef POPULATION_LOCK
     // Custom Copy Constructor
     Population(const Population& other) :
-        _values(other._values),
+        values(other.values),
         _sorted_indices(other._sorted_indices),
         _mean(other._mean),
         _min(other._min),
@@ -507,7 +508,7 @@ public:
             // Lock both mutexes to ensure thread safety during the copy
             std::lock_guard<std::mutex> lock(_mutex);
 
-            _values         = other._values;
+            values          = other.values;
             _sorted_indices = other._sorted_indices;
             _mean           = other._mean;
             _min            = other._min;
@@ -524,21 +525,16 @@ public:
 #ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
-        _values.clear();
-        _values.reserve(_max_size);
+        values.clear();
+        values.reserve(_max_size);
         _sorted_indices.clear();
         _sorted_indices.reserve(_max_size);
         _mean = 0.0;
-        _min = -1.0;
-        _max = -1.0;
+        _min  = -1.0;
+        _max  = -1.0;
 
-        assert(_values.empty());
+        assert(values.empty());
         assert(_sorted_indices.empty());
-    }
-
-    std::vector<double> values() const
-    {
-        return _values;
     }
 
     void insert(double value)
@@ -546,26 +542,26 @@ public:
 #ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
-        assert(_values.size() == _sorted_indices.size());
-        assert(_values.size() < _values.capacity());
+        assert(values.size() == _sorted_indices.size());
+        assert(values.size() < values.capacity());
         assert(_sorted_indices.size() < _sorted_indices.capacity());
 
-        const size_t i_new = _values.size();
+        const size_t i_new = values.size();
         auto it            = std::lower_bound(_sorted_indices.begin(),
                                    _sorted_indices.end(),
                                    value,
                                    [&](size_t i, double new_value) {
-                                       return _values[i] < new_value;
+                                       return values[i] < new_value;
                                    });
 
         _sorted_indices.insert(it, i_new);
-        _values.push_back(value);
-        assert(_values.size() > 0);
-        assert(_sorted_indices.size() == _values.size());
+        values.push_back(value);
+        assert(values.size() > 0);
+        assert(_sorted_indices.size() == values.size());
 
-        _mean = welford_mean(_mean, value, _values.size());
+        _mean = welford_mean(_mean, value, values.size());
 
-        if (_values.size() == 1) {
+        if (values.size() == 1) {
             assert(_min == -1.0);
             assert(_max == -1.0);
             _min = value;
@@ -584,17 +580,17 @@ public:
 
     size_t size() const
     {
-        return _values.size();
+        return values.size();
     }
 
     bool empty() const
     {
-        return _values.empty();
+        return values.empty();
     }
 
     size_t capacity() const
     {
-        return _values.capacity();
+        return values.capacity();
     }
 
     double min() const
@@ -620,16 +616,16 @@ public:
 
         // ref: https://en.wikipedia.org/wiki/Median
         // odd number
-        if (_values.size() % 2 == 1) {
-            const size_t med_i = (_values.size() + 1) / 2;
-            return _values[_sorted_indices[med_i]];
+        if (values.size() % 2 == 1) {
+            const size_t med_i = (values.size() + 1) / 2;
+            return values[_sorted_indices[med_i]];
         }
 
         // even number
-        const size_t med_i1 = _values.size() / 2;
+        const size_t med_i1 = values.size() / 2;
         const size_t med_i2 = med_i1 + 1;
-        return (_values[_sorted_indices[med_i1]] +
-                _values[_sorted_indices[med_i2]]) /
+        return (values[_sorted_indices[med_i1]] +
+                values[_sorted_indices[med_i2]]) /
                2.0;
     }
 
@@ -639,23 +635,23 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 #endif
         assert(!_sorted_indices.empty());
-        assert(_values.size() == _sorted_indices.size());
+        assert(values.size() == _sorted_indices.size());
 
         CDF cdf;
-        cdf.unique_values.reserve(_values.size());
-        cdf.p.reserve(_values.size());
+        cdf.unique_values.reserve(values.size());
+        cdf.p.reserve(values.size());
 
         double p            = 0.0;
-        const double p_diff = 1.0 / static_cast<double>(_values.size());
+        const double p_diff = 1.0 / static_cast<double>(values.size());
 
 #ifndef NDEBUG
-        double prev_v = _values[_sorted_indices[0]];
+        double prev_v = values[_sorted_indices[0]];
 #endif
-        for (size_t i = 0; i < _values.size(); i++) {
+        for (size_t i = 0; i < values.size(); i++) {
             assert(i < _sorted_indices.size());
             const size_t i_sorted = _sorted_indices[i];
-            assert(i_sorted < _values.size());
-            const double v = _values[i_sorted];
+            assert(i_sorted < values.size());
+            const double v = values[i_sorted];
 #ifndef NDEBUG
             assert(v >= prev_v);
             prev_v = v;
