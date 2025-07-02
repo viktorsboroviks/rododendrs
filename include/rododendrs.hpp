@@ -459,6 +459,36 @@ struct CDF {
     std::vector<double> p;
 };
 
+template <typename T>
+struct Stats {
+    T min  = 0;
+    T max  = 0;
+    T mean = 0;
+    T n    = 0;
+
+    void reset()
+    {
+        min  = 0;
+        max  = 0;
+        mean = 0;
+        n    = 0;
+    }
+
+    void add(T value)
+    {
+        n++;
+
+        if (n == 1) {
+            min = max = mean = value;
+            return;
+        }
+
+        min  = std::min(min, value);
+        max  = std::max(max, value);
+        mean = welford_mean(mean, value, n);
+    }
+};
+
 class Population {
 private:
 #ifdef POPULATION_LOCK
@@ -468,9 +498,7 @@ private:
     size_t _max_size = 0;
     std::vector<double> _sorted_indices;
 
-    double _mean = 0.0;
-    double _min  = -1.0;
-    double _max  = -1.0;
+    Stats<double> _stats;
 
 public:
     std::vector<double> values;
@@ -492,9 +520,7 @@ public:
     Population(const Population& other) :
         values(other.values),
         _sorted_indices(other._sorted_indices),
-        _mean(other._mean),
-        _min(other._min),
-        _max(other._max)
+        _stats(other._stats)
     {
         // _mutex is default-initialized for the new object
     }
@@ -510,9 +536,7 @@ public:
 
             values          = other.values;
             _sorted_indices = other._sorted_indices;
-            _mean           = other._mean;
-            _min            = other._min;
-            _max            = other._max;
+            _stats          = other._stats;
 
             // _mutex is not copied; it remains unique to this object
         }
@@ -529,9 +553,7 @@ public:
         values.reserve(_max_size);
         _sorted_indices.clear();
         _sorted_indices.reserve(_max_size);
-        _mean = 0.0;
-        _min  = -1.0;
-        _max  = -1.0;
+        _stats.reset();
 
         assert(values.empty());
         assert(_sorted_indices.empty());
@@ -559,23 +581,8 @@ public:
         assert(values.size() > 0);
         assert(_sorted_indices.size() == values.size());
 
-        _mean = welford_mean(_mean, value, values.size());
-
-        if (values.size() == 1) {
-            assert(_min == -1.0);
-            assert(_max == -1.0);
-            _min = value;
-            _max = value;
-            return;
-        }
-
-        if (value < _min) {
-            _min = value;
-        }
-
-        if (value > _max) {
-            _max = value;
-        }
+        _stats.add(value);
+        assert(_stats.n == values.size());
     }
 
     size_t size() const
@@ -595,17 +602,17 @@ public:
 
     double min() const
     {
-        return _min;
+        return _stats.min;
     }
 
     double max() const
     {
-        return _max;
+        return _stats.max;
     }
 
     double mean()
     {
-        return _mean;
+        return _stats.mean;
     }
 
     double median()
