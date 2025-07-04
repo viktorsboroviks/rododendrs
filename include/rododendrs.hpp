@@ -503,16 +503,25 @@ private:
 public:
     std::vector<double> values;
 
-    Population(size_t max_size) :
-        _max_size(max_size)
+    void reserve(size_t max_size)
     {
-        assert(_max_size > 0);
+        _max_size = max_size;
 
         values.reserve(_max_size);
         _sorted_indices.reserve(_max_size);
 
         assert(values.empty());
         assert(_sorted_indices.empty());
+    }
+
+    Population(size_t max_size)
+    {
+        reserve(max_size);
+    }
+
+    Population() :
+        Population(0)
+    {
     }
 
 #ifdef POPULATION_LOCK
