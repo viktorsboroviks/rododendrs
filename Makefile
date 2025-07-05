@@ -49,7 +49,6 @@ lint-cpp: \
 	cppcheck \
 		--enable=warning,portability,performance \
 		--enable=style,information \
-		--enable=missingInclude \
 		--inconclusive \
 		--library=std,posix,gnu \
 		--platform=unix64 \
@@ -57,10 +56,8 @@ lint-cpp: \
 		--std=c++20 \
 		--inline-suppr \
 		--check-level=exhaustive \
-		--suppress=missingIncludeSystem \
 		--suppress=checkersReport \
 		--checkers-report=cppcheck_report.txt \
-		-I./include \
 		$^
 
 clean:

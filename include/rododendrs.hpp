@@ -356,8 +356,8 @@ double welford_m2(double m2_prev, double prev_mean, double value, size_t n)
         return 0;
     }
 
-    const double mean = welford_mean(prev_mean, value, n);
-    const double m2   = m2_prev + (value - prev_mean) * (value - mean);
+    const double _mean = welford_mean(prev_mean, value, n);
+    const double m2    = m2_prev + (value - prev_mean) * (value - _mean);
     return m2;
 }
 
@@ -374,8 +374,8 @@ double confidence_interval_margin(double sd, size_t n, double z)
 }
 
 struct ConfidenceInterval {
-    double lower;
-    double upper;
+    double lower;  // cppcheck-suppress unusedStructMember
+    double upper;  // cppcheck-suppress unusedStructMember
 };
 
 ConfidenceInterval confidence_interval(double mean,
@@ -404,7 +404,7 @@ private:
     std::deque<double> _values;
 
 public:
-    SMA(size_t period) :
+    explicit SMA(size_t period) :
         _period(period)
     {
         assert(_period > 0);
@@ -432,9 +432,8 @@ public:
 
         if (_values.size() == _period) {
             assert(_sum == 0);
-            for (const auto& value : _values) {
-                _sum += value;
-            }
+
+            _sum = std::accumulate(_values.begin(), _values.end(), 0.0);
         }
 
         if (_values.size() > _period) {
@@ -514,7 +513,7 @@ public:
         assert(_sorted_indices.empty());
     }
 
-    Population(size_t max_size)
+    explicit Population(size_t max_size)
     {
         reserve(max_size);
     }
@@ -525,18 +524,18 @@ public:
     }
 
 #ifdef POPULATION_LOCK
-    // Custom Copy Constructor
+    // custom copy constructor
+    // cppcheck-suppress missingMemberCopy
     Population(const Population& other) :
-        values(other.values),
         _sorted_indices(other._sorted_indices),
-        _stats(other._stats)
+        _stats(other._stats),
+        values(other.values)
     {
-        // _mutex is default-initialized for the new object
     }
 #endif
 
 #ifdef POPULATION_LOCK
-    // Custom Copy Assignment Operator
+    // custom copy assignment operator
     Population& operator=(const Population& other)
     {
         if (this != &other) {
@@ -546,6 +545,7 @@ public:
             values          = other.values;
             _sorted_indices = other._sorted_indices;
             _stats          = other._stats;
+            _max_size       = other._max_size;
 
             // _mutex is not copied; it remains unique to this object
         }
@@ -619,7 +619,7 @@ public:
         return _stats.max;
     }
 
-    double mean()
+    double mean() const
     {
         return _stats.mean;
     }
@@ -729,17 +729,13 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
             assert(pa <= cdf_a.p[ia_next]);
             va = va_candidate;
             pa = cdf_a.p[ia_next];
-            if (ia_next < cdf_a.p.size()) {
-                ia_next++;
-            }
+            ia_next++;
         }
         else {
             assert(pb <= cdf_b.p[ib_next]);
             va = vb_candidate;
             pb = cdf_b.p[ib_next];
-            if (ib_next < cdf_b.p.size()) {
-                ib_next++;
-            }
+            ib_next++;
         }
 
         // get kstest
