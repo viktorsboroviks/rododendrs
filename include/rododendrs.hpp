@@ -40,6 +40,28 @@ struct Range {
     T step_max;
 };
 
+// warning!
+// ai generated code: check that value is Range<any>
+// see iestaade for example usage
+template <typename T>
+struct is_range : std::false_type {};
+template <typename U>
+struct is_range<Range<U>> : std::true_type {};
+template <typename T>
+inline constexpr bool is_range_v = is_range<T>::value;
+
+// warning!
+// ai generated code: from Range<T> get type T
+// see iestaade for example usage
+template <typename T>
+struct range_value_type;
+template <typename U>
+struct range_value_type<Range<U>> {
+    using type = U;
+};
+template <typename T>
+using range_value_type_t = typename range_value_type<T>::type;
+
 template <typename T>
 T rnd_in_range(T min, T max)
 {
