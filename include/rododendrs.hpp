@@ -728,8 +728,8 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
 
     size_t ia_next = 0;
     size_t ib_next = 0;
-    double pa      = 0;
-    double pb      = 0;
+    double pa      = 0.0;
+    double pb      = 0.0;
     double va      = cdf_a.unique_values[0];
     double vb      = cdf_b.unique_values[0];
 
