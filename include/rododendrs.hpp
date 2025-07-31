@@ -484,18 +484,12 @@ struct CDF {
     size_t _size = 0;
     std::deque<CdfEntry> buckets;
 
-    explicit CDF(size_t n)
-    {
-        // TODO: check if space can be reserved
-        //       or more efficient container used - std::vector?
-    }
-
     bool empty() const
     {
         return buckets.empty();
     }
 
-    bool full() const
+    size_t size() const
     {
         return _size;
     }
@@ -503,6 +497,7 @@ struct CDF {
     void clear()
     {
         buckets.clear();
+        _size = 0;
     }
 
     void insert(double val)
@@ -519,17 +514,18 @@ struct CDF {
                 std::lower_bound(buckets.begin(),
                                  buckets.end(),
                                  val,
-                                 [this](const CdfEntry& entry, double value) {
+                                 [](const CdfEntry& entry, double value) {
                                      return entry.unique_value <= value;
                                  });
-        if (it->unique_value == val) {
+        if (it == buckets.end()) {
+            buckets.push_back(new_entry);
+        } else if (it->unique_value == val) {
             it->n++;
-        }
-        else {
+        } else {
             buckets.insert(it, new_entry);
         }
 
-        assert(buckets.front().unique_val <= buckets.back().unique_val);
+        assert(buckets.front().unique_value <= buckets.back().unique_value);
     }
 
     void remove(double val)
@@ -541,7 +537,7 @@ struct CDF {
                 std::lower_bound(buckets.begin(),
                                  buckets.end(),
                                  val,
-                                 [this](const CdfEntry& entry, double value) {
+                                 [](const CdfEntry& entry, double value) {
                                      return entry.unique_value == value;
                                  });
         assert(it != buckets.end());
@@ -685,7 +681,11 @@ public:
                                        return values[i] < new_value;
                                    });
 
-        _sorted_indices.insert(it, i_new);
+        if(it == _sorted_indices.end()) {
+            _sorted_indices.push_back(i_new);
+        } else {
+            _sorted_indices.insert(it, i_new);
+        }
         values.push_back(value);
         assert(values.size() > 0);
         assert(_sorted_indices.size() == values.size());
@@ -780,91 +780,144 @@ public:
     }
 };
 
+struct CdfCtx {
+    const CDF& cdf;
+    size_t i         = 0;  // element
+    size_t i_bucket  = 0;  // bucket
+    size_t ii_bucket = 0;  // element within bucket
+
+    explicit CdfCtx(const CDF& cdf) :
+        cdf(cdf)
+    {
+    }
+
+    void reset()
+    {
+        i         = 0;
+        i_bucket  = 0;
+        ii_bucket = 0;
+    }
+
+    bool done() const
+    {
+        return (i == (cdf.size() - 1));
+    }
+
+    void next()
+    {
+        if (done()) {
+            return;
+        }
+
+        i++;
+        assert(i < cdf.size());
+
+        assert(ii_bucket < cdf.buckets[i_bucket].n);
+        if (ii_bucket + 1 < cdf.buckets[i_bucket].n) {
+            ii_bucket++;
+            return;
+        }
+
+        i_bucket++;
+        ii_bucket = 0;
+        assert(i_bucket < cdf.buckets.size());
+    }
+
+    double unique_value() const
+    {
+        assert(i_bucket < cdf.buckets.size());
+        return cdf.buckets[i_bucket].unique_value;
+    }
+
+    size_t n() const
+    {
+        return ii_bucket;
+    }
+};
+
 struct KstestCtx {
-    const CDF& cdf_a;
-    const CDF& cdf_b;
-    size_t i_bucket_a;
-    size_t i_bucket_b;
-    size_t i_a;
-    size_t i_b;
-    double max_pdiff;
-    double max_pdiff_partial;
+    CdfCtx a;
+    CdfCtx b;
+
+    size_t len_a     = 0;
+    size_t len_b     = 0;
+    double max_pdiff = 0.0;
 
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
-        cdf_a(cdf_a),
-        cdf_b(cdf_b),
-        i_bucket_a(0),
-        i_bucket_b(0),
-        i_a(0),
-        i_b(0),
-        max_pdiff(0.0),
-        max_pdiff_partial(0.0)
+        a(cdf_a),
+        b(cdf_b)
     {
         // nothing to do
     }
 };
 
 // calculate kstest until end_i
-double kstest(KSTest& ctx, size_t len_a, size_t len_b)
+double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 {
-    // double ret = 0.0;
-    // ctx.max_pdiff
+    assert(len_a <= ctx.a.cdf.size());
+    assert(len_b <= ctx.b.cdf.size());
 
-    // size_t ia_next = 0;
-    // size_t ib_next = 0;
-    // ctx.i_a
-    // ctx.i_b
+    // renormalize max_pdiff
+    // - will change max_pdiff after last calculation
+    // - will have no impact if just starting
+    const double renorm_coef =
+            static_cast<double>(ctx.len_a) / static_cast<double>(len_a);
+    ctx.max_pdiff *= renorm_coef;
+    ctx.len_a = len_a;
+    ctx.len_b = len_b;
 
-    double pa = 0.0;
-    double pb = 0.0;
-    double va = ctx.cdf_a.front().unique_value;
-    double vb = ctx.cdf_b.front().unique_value;
+    const double pa_step = 1.0 / static_cast<double>(len_a);
+    const double pb_step = 1.0 / static_cast<double>(len_b);
+    double pa            = ctx.a.i * pa_step;
+    double pb            = ctx.b.i * pb_step;
+
+    double va = ctx.a.unique_value();
+    double vb = ctx.b.unique_value();
 
     // loop until end of both cdfs
-    while (ctx.i_a < len_a && ctx.i_b < len_b) {
-        // select candidates
-        // TODO: rewrite to use buckets
-        const double va_candidate = ctx.i_a < ctx.cdf_a.size()
-                                            ? cdf_a.at(ctx.i_a).unique_value
-                                            : va;
-        const double vb_candidate =
-                ctx.i_b < cdf_b.size() ? cdf_b.at(ctx.i_b).unique_value : vb;
-        assert(va_candidate >= va);
-        assert(vb_candidate >= vb);
+    while (ctx.a.i + 1 < len_a && ctx.b.i + 1 < len_b) {
+        assert(ctx.a.i < len_a);
+        assert(ctx.b.i < len_b);
 
-        // TODO: proceed
-        // compare candidates
-        // advance
-        if (va_candidate < vb_candidate) {
-            assert(pa <= cdf_a.p[ia_next]);
-            va = va_candidate;
-            pa = cdf_a.p[ia_next];
-            ia_next++;
-        }
-        else {
-            assert(pb <= cdf_b.p[ib_next]);
-            va = vb_candidate;
-            pb = cdf_b.p[ib_next];
-            ib_next++;
+        if (va < vb) {
+#ifndef NDEBUG
+            const double pa_prev = pa;
+#endif
+            ctx.a.next();
+            pa = ctx.a.i * pa_step;
+            assert(pa_prev <= pa);
+            va = ctx.a.unique_value();
+        } else {
+#ifndef NDEBUG
+            const double pb_prev = pb;
+#endif
+            ctx.b.next();
+            pb = ctx.b.i * pb_step;
+            assert(pb_prev <= pb);
+            vb = ctx.b.unique_value();
         }
 
         // get kstest
-        ret = std::max(ret, std::abs(pa - pb));
-        assert(ret > 0.0);
-        assert(ret <= 1.0);
+        ctx.max_pdiff = std::max(ctx.max_pdiff, std::abs(pa - pb));
+        assert(ctx.max_pdiff > 0.0);
+        assert(ctx.max_pdiff <= 1.0);
 
         // abort if remaining points cannot produce higher kstest value
-        const double max_ret = 1.0 - std::min(pa, pb);
-        if (max_ret < ret) {
+        const double max_max_pdiff = 1.0 - std::min(pa, pb);
+        if (max_max_pdiff < ctx.max_pdiff) {
             break;
         }
     }
+
+    return ctx.max_pdiff;
 }
 
 // calculate kstest over whole range
-double kstest(KSTest& ctx)
+double kstest(KstestCtx& ctx)
 {
-    // TODO: add
+    const size_t len_a = ctx.a.cdf.size();
+    const size_t len_b = ctx.b.cdf.size();
+    return kstest(ctx, len_a, len_b);
 }
 
 // calculate kstest over whole range
@@ -872,62 +925,6 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
 {
     KstestCtx ctx{cdf_a, cdf_b};
     return kstest(ctx);
-}
-
-// TODO: replace kstest
-double kstest(const CDF& cdf_a, const CDF& cdf_b)
-{
-    assert(!cdf_a.empty());
-    assert(!cdf_b.empty());
-
-    double ret = 0.0;
-
-    size_t ia_next = 0;
-    size_t ib_next = 0;
-    double pa      = 0.0;
-    double pb      = 0.0;
-    double va      = cdf_a.unique_values[0];
-    double vb      = cdf_b.unique_values[0];
-
-    // loop until both cdfs are exhausted
-    while (ia_next < cdf_a.p.size() && ib_next < cdf_b.p.size()) {
-        // select candidates
-        const double va_candidate = ia_next < cdf_a.unique_values.size()
-                                            ? cdf_a.unique_values[ia_next]
-                                            : va;
-        const double vb_candidate = ib_next < cdf_b.unique_values.size()
-                                            ? cdf_b.unique_values[ib_next]
-                                            : vb;
-        assert(va_candidate >= va);
-        assert(vb_candidate >= vb);
-
-        // compare candidates
-        // advance
-        if (va_candidate < vb_candidate) {
-            assert(pa <= cdf_a.p[ia_next]);
-            va = va_candidate;
-            pa = cdf_a.p[ia_next];
-            ia_next++;
-        }
-        else {
-            assert(pb <= cdf_b.p[ib_next]);
-            va = vb_candidate;
-            pb = cdf_b.p[ib_next];
-            ib_next++;
-        }
-
-        // get kstest
-        ret = std::max(ret, std::abs(pa - pb));
-        assert(ret > 0.0);
-        assert(ret <= 1.0);
-
-        // abort if remaining points cannot produce higher kstest value
-        const double max_ret = 1.0 - std::min(pa, pb);
-        if (max_ret < ret) {
-            break;
-        }
-    }
-    return ret;
 }
 
 }  // namespace rododendrs
