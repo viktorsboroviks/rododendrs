@@ -783,23 +783,82 @@ public:
 struct KstestCtx {
     const CDF& cdf_a;
     const CDF& cdf_b;
-    std::iterator it_a;
-    std::iterator it_b;
+    size_t i_bucket_a;
+    size_t i_bucket_b;
     size_t i_a;
     size_t i_b;
-    double max_diff;
-    double max_diff_partial;
+    double max_pdiff;
+    double max_pdiff_partial;
 
-    KstestCtx(const CDF& cdf_a, const CDF& cdf_b)
+    KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
+        cdf_a(cdf_a),
+        cdf_b(cdf_b),
+        i_bucket_a(0),
+        i_bucket_b(0),
+        i_a(0),
+        i_b(0),
+        max_pdiff(0.0),
+        max_pdiff_partial(0.0)
     {
-        // TODO: init
+        // nothing to do
     }
 };
 
 // calculate kstest until end_i
-double kstest(KSTest& ctx, size_t end_i_a, size_t end_i_b)
+double kstest(KSTest& ctx, size_t len_a, size_t len_b)
 {
-    // TODO: add
+    // double ret = 0.0;
+    // ctx.max_pdiff
+
+    // size_t ia_next = 0;
+    // size_t ib_next = 0;
+    // ctx.i_a
+    // ctx.i_b
+
+    double pa = 0.0;
+    double pb = 0.0;
+    double va = ctx.cdf_a.front().unique_value;
+    double vb = ctx.cdf_b.front().unique_value;
+
+    // loop until end of both cdfs
+    while (ctx.i_a < len_a && ctx.i_b < len_b) {
+        // select candidates
+        // TODO: rewrite to use buckets
+        const double va_candidate = ctx.i_a < ctx.cdf_a.size()
+                                            ? cdf_a.at(ctx.i_a).unique_value
+                                            : va;
+        const double vb_candidate =
+                ctx.i_b < cdf_b.size() ? cdf_b.at(ctx.i_b).unique_value : vb;
+        assert(va_candidate >= va);
+        assert(vb_candidate >= vb);
+
+        // TODO: proceed
+        // compare candidates
+        // advance
+        if (va_candidate < vb_candidate) {
+            assert(pa <= cdf_a.p[ia_next]);
+            va = va_candidate;
+            pa = cdf_a.p[ia_next];
+            ia_next++;
+        }
+        else {
+            assert(pb <= cdf_b.p[ib_next]);
+            va = vb_candidate;
+            pb = cdf_b.p[ib_next];
+            ib_next++;
+        }
+
+        // get kstest
+        ret = std::max(ret, std::abs(pa - pb));
+        assert(ret > 0.0);
+        assert(ret <= 1.0);
+
+        // abort if remaining points cannot produce higher kstest value
+        const double max_ret = 1.0 - std::min(pa, pb);
+        if (max_ret < ret) {
+            break;
+        }
+    }
 }
 
 // calculate kstest over whole range
