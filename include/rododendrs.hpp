@@ -476,8 +476,86 @@ public:
 };
 
 struct CDF {
-    std::vector<double> unique_values;
-    std::vector<double> p;
+    struct CdfEntry {
+        double unique_value;
+        size_t n;
+    };
+
+    size_t _size = 0;
+    std::deque<CdfEntry> buckets;
+
+    explicit CDF(size_t n)
+    {
+        // TODO: check if space can be reserved
+        //       or more efficient container used - std::vector?
+    }
+
+    bool empty() const
+    {
+        return buckets.empty();
+    }
+
+    bool full() const
+    {
+        return _size;
+    }
+
+    void clear()
+    {
+        buckets.clear();
+    }
+
+    void insert(double val)
+    {
+        _size++;
+
+        const CdfEntry new_entry = {val, 1};
+        if (buckets.empty()) {
+            buckets.push_front(new_entry);
+            return;
+        }
+
+        const auto it =
+                std::lower_bound(buckets.begin(),
+                                 buckets.end(),
+                                 val,
+                                 [this](const CdfEntry& entry, double value) {
+                                     return entry.unique_value <= value;
+                                 });
+        if (it->unique_value == val) {
+            it->n++;
+        }
+        else {
+            buckets.insert(it, new_entry);
+        }
+
+        assert(buckets.front().unique_val <= buckets.back().unique_val);
+    }
+
+    void remove(double val)
+    {
+        assert(_size > 0);
+        _size--;
+
+        const auto it =
+                std::lower_bound(buckets.begin(),
+                                 buckets.end(),
+                                 val,
+                                 [this](const CdfEntry& entry, double value) {
+                                     return entry.unique_value == value;
+                                 });
+        assert(it != buckets.end());
+        if (it->n > 1) {
+            it->n--;
+        }
+        else if (it->n == 1) {
+            buckets.erase(it);
+        }
+        else {
+            // this should never happen
+            assert(false);
+        }
+    }
 };
 
 template <typename T>
@@ -667,7 +745,7 @@ public:
                2.0;
     }
 
-    CDF cdf()
+    void fill_cdf(CDF& cdf) const
     {
 #ifdef POPULATION_LOCK
         std::lock_guard<std::mutex> lock(_mutex);
@@ -675,12 +753,7 @@ public:
         assert(!_sorted_indices.empty());
         assert(values.size() == _sorted_indices.size());
 
-        CDF cdf;
-        cdf.unique_values.reserve(values.size());
-        cdf.p.reserve(values.size());
-
-        double p            = 0.0;
-        const double p_diff = 1.0 / static_cast<double>(values.size());
+        cdf.clear();
 
 #ifndef NDEBUG
         double prev_v = values[_sorted_indices[0]];
@@ -695,34 +768,58 @@ public:
             prev_v = v;
 #endif
 
-            p += p_diff;
-            assert(p >= 0);
-
-            // if new value
-            if (cdf.unique_values.empty() || cdf.unique_values.back() != v) {
-                cdf.unique_values.push_back(v);
-                cdf.p.push_back(p);
-            }
-            else {
-                // same value
-                // only update p
-                cdf.p.back() = p;
-            }
+            cdf.insert(v);
         }
+    }
 
-        assert(cdf.unique_values.size() == cdf.p.size());
-        assert(cdf.p.back() > 0);
-        assert(1.0 - cdf.p.back() < 1.0e-3);
+    CDF cdf() const
+    {
+        CDF cdf;
+        fill_cdf(cdf);
         return cdf;
     }
 };
 
+struct KstestCtx {
+    const CDF& cdf_a;
+    const CDF& cdf_b;
+    std::iterator it_a;
+    std::iterator it_b;
+    size_t i_a;
+    size_t i_b;
+    double max_diff;
+    double max_diff_partial;
+
+    KstestCtx(const CDF& cdf_a, const CDF& cdf_b)
+    {
+        // TODO: init
+    }
+};
+
+// calculate kstest until end_i
+double kstest(KSTest& ctx, size_t end_i_a, size_t end_i_b)
+{
+    // TODO: add
+}
+
+// calculate kstest over whole range
+double kstest(KSTest& ctx)
+{
+    // TODO: add
+}
+
+// calculate kstest over whole range
 double kstest(const CDF& cdf_a, const CDF& cdf_b)
 {
-    assert(!cdf_a.p.empty());
-    assert(!cdf_b.p.empty());
-    assert(cdf_a.unique_values.size() == cdf_a.p.size());
-    assert(cdf_b.unique_values.size() == cdf_b.p.size());
+    KstestCtx ctx{cdf_a, cdf_b};
+    return kstest(ctx);
+}
+
+// TODO: replace kstest
+double kstest(const CDF& cdf_a, const CDF& cdf_b)
+{
+    assert(!cdf_a.empty());
+    assert(!cdf_b.empty());
 
     double ret = 0.0;
 
