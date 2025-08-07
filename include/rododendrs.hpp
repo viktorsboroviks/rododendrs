@@ -10,6 +10,8 @@
 #include <limits>
 #include <random>
 #include <set>
+#include <sstream>
+#include <string>
 #include <vector>
 #if defined(G_RNG_LOCK) || defined(POPULATION_LOCK)
 #include <mutex>
@@ -519,9 +521,11 @@ struct CDF {
                                  });
         if (it == buckets.end()) {
             buckets.push_back(new_entry);
-        } else if (it->unique_value == val) {
+        }
+        else if (it->unique_value == val) {
             it->n++;
-        } else {
+        }
+        else {
             buckets.insert(it, new_entry);
         }
 
@@ -533,13 +537,10 @@ struct CDF {
         assert(_size > 0);
         _size--;
 
-        const auto it =
-                std::lower_bound(buckets.begin(),
-                                 buckets.end(),
-                                 val,
-                                 [](const CdfEntry& entry, double value) {
-                                     return entry.unique_value == value;
-                                 });
+        const auto it = std::find_if(
+                buckets.begin(), buckets.end(), [val](const CdfEntry& entry) {
+                    return entry.unique_value == val;
+                });
         assert(it != buckets.end());
         if (it->n > 1) {
             it->n--;
@@ -551,6 +552,17 @@ struct CDF {
             // this should never happen
             assert(false);
         }
+    }
+
+    std::string to_string() const
+    {
+        std::stringstream ss{};
+        for (size_t i = 0; i < buckets.size(); i++) {
+            const auto& entry = buckets[i];
+            ss << i << ") " << entry.unique_value << ": " << entry.n
+               << std::endl;
+        }
+        return ss.str();
     }
 };
 
@@ -681,9 +693,10 @@ public:
                                        return values[i] < new_value;
                                    });
 
-        if(it == _sorted_indices.end()) {
+        if (it == _sorted_indices.end()) {
             _sorted_indices.push_back(i_new);
-        } else {
+        }
+        else {
             _sorted_indices.insert(it, i_new);
         }
         values.push_back(value);
@@ -887,7 +900,8 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
             pa = ctx.a.i * pa_step;
             assert(pa_prev <= pa);
             va = ctx.a.unique_value();
-        } else {
+        }
+        else {
 #ifndef NDEBUG
             const double pb_prev = pb;
 #endif
