@@ -854,7 +854,7 @@ struct KstestCtx {
 
     size_t len_a     = 0;
     size_t len_b     = 0;
-    double max_pdiff = 0.0;
+    double max_pdiff = 1.0;
 
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
         a(cdf_a),
@@ -867,14 +867,19 @@ struct KstestCtx {
 // calculate kstest until end_i
 double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 {
+    assert(len_a > 0);
+    assert(len_b > 0);
     assert(len_a <= ctx.a.cdf.size());
     assert(len_b <= ctx.b.cdf.size());
 
     // renormalize max_pdiff
     // - will change max_pdiff after last calculation
     // - will have no impact if just starting
-    const double renorm_coef =
-            static_cast<double>(ctx.len_a) / static_cast<double>(len_a);
+    const double renorm_coef = ctx.len_a > 0
+                                       ? static_cast<double>(ctx.len_a) /
+                                                 static_cast<double>(len_a)
+                                       : 1.0;
+    assert(renorm_coef > 0.0);
     ctx.max_pdiff *= renorm_coef;
     ctx.len_a = len_a;
     ctx.len_b = len_b;
@@ -923,6 +928,8 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
         }
     }
 
+    assert(ctx.max_pdiff > 0.0);
+    assert(ctx.max_pdiff <= 1.0);
     return ctx.max_pdiff;
 }
 
