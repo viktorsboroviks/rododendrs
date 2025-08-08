@@ -509,26 +509,23 @@ struct CDF {
         const CdfEntry new_entry = {val, 1};
         if (buckets.empty()) {
             buckets.push_front(new_entry);
-            return;
+            goto insert_return;
         }
 
-        const auto it =
-                std::lower_bound(buckets.begin(),
-                                 buckets.end(),
-                                 val,
-                                 [](const CdfEntry& entry, double value) {
-                                     return entry.unique_value <= value;
-                                 });
-        if (it == buckets.end()) {
-            buckets.push_back(new_entry);
-        }
-        else if (it->unique_value == val) {
-            it->n++;
-        }
-        else {
-            buckets.insert(it, new_entry);
-        }
+        for (size_t i = 0; i < buckets.size(); i++) {
+            if (buckets[i].unique_value == val) {
+                buckets[i].n++;
+                goto insert_return;
+            }
 
+            if (buckets[i].unique_value > val) {
+                buckets.insert(buckets.begin() + i, new_entry);
+                goto insert_return;
+            }
+        }
+        buckets.push_back(new_entry);
+
+    insert_return:
         assert(buckets.front().unique_value <= buckets.back().unique_value);
     }
 
@@ -854,13 +851,32 @@ struct KstestCtx {
 
     size_t len_a     = 0;
     size_t len_b     = 0;
-    double max_pdiff = 1.0;
+    double max_pdiff = 0.0;
 
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
         a(cdf_a),
         b(cdf_b)
     {
         // nothing to do
+    }
+
+    std::string to_string() const
+    {
+        std::stringstream ss{};
+        // clang-format off
+        ss << "max_pdiff: "     << max_pdiff    << std::endl;
+        ss << "a:"                              << std::endl;
+        ss << "  i: "           << a.i          << std::endl;
+        ss << "  i_bucket: "    << a.i_bucket   << std::endl;
+        ss << "  ii_bucket: "   << a.ii_bucket  << std::endl;
+        ss << "  len_a: "       << len_a        << std::endl;
+        ss << "b:"                              << std::endl;
+        ss << "  i: "           << b.i          << std::endl;
+        ss << "  i_bucket: "    << b.i_bucket   << std::endl;
+        ss << "  ii_bucket: "   << b.ii_bucket  << std::endl;
+        ss << "  len_b: "       << len_b        << std::endl;
+        // clang-format on
+        return ss.str();
     }
 };
 
@@ -928,7 +944,7 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
         }
     }
 
-    assert(ctx.max_pdiff > 0.0);
+    assert(ctx.max_pdiff >= 0.0);
     assert(ctx.max_pdiff <= 1.0);
     return ctx.max_pdiff;
 }
