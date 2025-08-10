@@ -478,86 +478,58 @@ public:
 };
 
 struct CDF {
-    struct CdfEntry {
-        double unique_value;
-        size_t n;
-    };
-
-    size_t _size = 0;
-    std::deque<CdfEntry> buckets;
+    std::deque<double> sorted_values;
 
     bool empty() const
     {
-        return buckets.empty();
+        return sorted_values.empty();
     }
 
     size_t size() const
     {
-        return _size;
+        return sorted_values.size();
     }
 
     void clear()
     {
-        buckets.clear();
-        _size = 0;
+        sorted_values.clear();
     }
 
     void insert(double val)
     {
-        _size++;
-
-        const CdfEntry new_entry = {val, 1};
-        if (buckets.empty()) {
-            buckets.push_front(new_entry);
+        if (sorted_values.empty()) {
+            sorted_values.push_back(val);
             goto insert_return;
         }
 
-        for (size_t i = 0; i < buckets.size(); i++) {
-            if (buckets[i].unique_value == val) {
-                buckets[i].n++;
-                goto insert_return;
-            }
-
-            if (buckets[i].unique_value > val) {
-                buckets.insert(buckets.begin() + i, new_entry);
+        for (size_t i = 0; i < sorted_values.size(); i++) {
+            if (sorted_values[i] >= val) {
+                sorted_values.insert(sorted_values.begin() + i, val);
                 goto insert_return;
             }
         }
-        buckets.push_back(new_entry);
+
+        sorted_values.push_back(val);
 
     insert_return:
-        assert(buckets.front().unique_value <= buckets.back().unique_value);
+        assert(sorted_values.front() <= sorted_values.back());
     }
 
     void remove(double val)
     {
-        assert(_size > 0);
-        _size--;
+        assert(!empty());
 
-        const auto it = std::find_if(
-                buckets.begin(), buckets.end(), [val](const CdfEntry& entry) {
-                    return entry.unique_value == val;
-                });
-        assert(it != buckets.end());
-        if (it->n > 1) {
-            it->n--;
-        }
-        else if (it->n == 1) {
-            buckets.erase(it);
-        }
-        else {
-            // this should never happen
-            assert(false);
-        }
+        const auto it =
+                std::find(sorted_values.begin(), sorted_values.end(), val);
+        assert(it != sorted_values.end());
+        sorted_values.erase(it);
     }
 
     std::string to_string() const
     {
         std::stringstream ss{};
-        for (size_t i = 0; i < buckets.size(); i++) {
-            const auto& entry = buckets[i];
-            ss << i << ") " << entry.unique_value << ": " << entry.n
-               << std::endl;
+        for (size_t i = 0; i < sorted_values.size(); i++) {
+            ss << i << ") " << sorted_values[i] << std::endl;
         }
         return ss.str();
     }
@@ -792,9 +764,9 @@ public:
 
 struct CdfCtx {
     const CDF& cdf;
-    size_t i         = 0;  // element
-    size_t i_bucket  = 0;  // bucket
-    size_t ii_bucket = 0;  // element within bucket
+    size_t len = 0;  // must be set explicitly to a cdf.size()
+                     // or lower to use a subset of cdf
+    size_t i   = 0;
 
     explicit CdfCtx(const CDF& cdf) :
         cdf(cdf)
@@ -803,59 +775,37 @@ struct CdfCtx {
 
     void reset()
     {
-        i         = 0;
-        i_bucket  = 0;
-        ii_bucket = 0;
-    }
-
-    bool done() const
-    {
-        return (i == (cdf.size() - 1));
+        i   = 0;
+        len = 0;
     }
 
     void next()
     {
-        if (done()) {
-            return;
-        }
-
         i++;
-        assert(i < cdf.size());
-
-        assert(ii_bucket < cdf.buckets[i_bucket].n);
-        if (ii_bucket + 1 < cdf.buckets[i_bucket].n) {
-            ii_bucket++;
-            return;
-        }
-
-        i_bucket++;
-        ii_bucket = 0;
-        assert(i_bucket < cdf.buckets.size());
+        assert(i <= len);
     }
 
-    double unique_value() const
+    bool done() const
     {
-        assert(i_bucket < cdf.buckets.size());
-        return cdf.buckets[i_bucket].unique_value;
+        assert(i <= len);
+        return i == len;
     }
 
-    size_t n() const
+    double val() const
     {
-        return ii_bucket;
+        return cdf.sorted_values[i];
     }
 };
 
 struct KstestCtx {
-    CdfCtx a;
-    CdfCtx b;
+    CdfCtx a_next;
+    CdfCtx b_next;
 
-    size_t len_a     = 0;
-    size_t len_b     = 0;
     double max_pdiff = 0.0;
 
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
-        a(cdf_a),
-        b(cdf_b)
+        a_next(cdf_a),
+        b_next(cdf_b)
     {
         // nothing to do
     }
@@ -864,17 +814,15 @@ struct KstestCtx {
     {
         std::stringstream ss{};
         // clang-format off
-        ss << "max_pdiff: "     << max_pdiff    << std::endl;
-        ss << "a:"                              << std::endl;
-        ss << "  i: "           << a.i          << std::endl;
-        ss << "  i_bucket: "    << a.i_bucket   << std::endl;
-        ss << "  ii_bucket: "   << a.ii_bucket  << std::endl;
-        ss << "  len_a: "       << len_a        << std::endl;
-        ss << "b:"                              << std::endl;
-        ss << "  i: "           << b.i          << std::endl;
-        ss << "  i_bucket: "    << b.i_bucket   << std::endl;
-        ss << "  ii_bucket: "   << b.ii_bucket  << std::endl;
-        ss << "  len_b: "       << len_b        << std::endl;
+        ss << "max_pdiff: " << max_pdiff        << std::endl;
+        ss << "a"                               << std::endl;
+        ss << "  len: "     << a_next.len       << std::endl;
+        ss << "  i: "       << a_next.i         << std::endl;
+        ss << "  done: "    << a_next.done()    << std::endl;
+        ss << "b"                               << std::endl;
+        ss << "  len: "     << b_next.len       << std::endl;
+        ss << "  i: "       << b_next.i         << std::endl;
+        ss << "  done: "    << b_next.done()    << std::endl;
         // clang-format on
         return ss.str();
     }
@@ -885,64 +833,131 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 {
     assert(len_a > 0);
     assert(len_b > 0);
-    assert(len_a <= ctx.a.cdf.size());
-    assert(len_b <= ctx.b.cdf.size());
+    assert(len_a <= ctx.a_next.cdf.size());
+    assert(len_b <= ctx.b_next.cdf.size());
+    assert(ctx.a_next.i < len_a);
+    assert(ctx.b_next.i < len_b);
 
     // renormalize max_pdiff
     // - will change max_pdiff after last calculation
     // - will have no impact if just starting
-    const double renorm_coef = ctx.len_a > 0
-                                       ? static_cast<double>(ctx.len_a) /
-                                                 static_cast<double>(len_a)
-                                       : 1.0;
-    assert(renorm_coef > 0.0);
-    ctx.max_pdiff *= renorm_coef;
-    ctx.len_a = len_a;
-    ctx.len_b = len_b;
+    const double renorm_coef_a =
+            ctx.a_next.len > 0 ? static_cast<double>(ctx.a_next.len) /
+                                         static_cast<double>(len_a)
+                               : 1.0;
+    assert(renorm_coef_a > 0.0);
+#ifndef NDEBUG
+    const double renorm_coef_b =
+            ctx.b_next.len > 0 ? static_cast<double>(ctx.b_next.len) /
+                                         static_cast<double>(len_b)
+                               : 1.0;
+    assert(renorm_coef_b > 0.0);
+    assert(renorm_coef_b == renorm_coef_a);
+#endif
+    ctx.max_pdiff *= renorm_coef_a;
+    ctx.a_next.len = len_a;
+    ctx.b_next.len = len_b;
 
     const double pa_step = 1.0 / static_cast<double>(len_a);
     const double pb_step = 1.0 / static_cast<double>(len_b);
-    double pa            = ctx.a.i * pa_step;
-    double pb            = ctx.b.i * pb_step;
 
-    double va = ctx.a.unique_value();
-    double vb = ctx.b.unique_value();
+    // TODO: consider storing in ctx instead?
+    //       - still must be renormed every time
+    // TODO: review how assigned in update
+    double pa = ctx.a_next.i * pa_step;
+    double pb = ctx.b_next.i * pb_step;
 
-    // loop until end of both cdfs
-    while (ctx.a.i + 1 < len_a && ctx.b.i + 1 < len_b) {
-        assert(ctx.a.i < len_a);
-        assert(ctx.b.i < len_b);
+    assert(pa >= 0);
+    assert(pa <= 1.0);
+    assert(pb >= 0);
+    assert(pb <= 1.0);
 
-        if (va < vb) {
+    while (true) {
+        // update max p diff
+        ctx.max_pdiff = std::max(ctx.max_pdiff, std::abs(pa - pb));
+        assert(ctx.max_pdiff >= 0.0);
+        assert(ctx.max_pdiff <= 1.0);
+
+        // update pa, pb
+        bool update_a = false;
+        bool update_b = false;
+        if (!ctx.a_next.done() && !ctx.b_next.done() &&
+            (ctx.a_next.val() == ctx.b_next.val())) {
+            // both pa and pb not reached 1.0
+            // both pa and pb next have same value
+            update_a = true;
+            update_b = true;
+        }
+        if ((!ctx.a_next.done()) &&
+            ((!ctx.b_next.done() && (ctx.a_next.val() < ctx.b_next.val())) ||
+             ctx.b_next.done())) {
+            // pa not reached 1.0
+            // and
+            // next va is to the left of next vb
+            // or pb reached 1.0
+            //   next_va---next_vb--
+            //   |          .
+            // -- . . . . . .
+            // select a
+            // update va/pa
+            update_a = true;
+        }
+        else if (!ctx.b_next.done()) {
+            // pb not reached 1.0
+            // update vb/pb
+            update_b = true;
+        }
+        else {
+            // both pa and pb reached 1.0
+            break;
+        }
+        if (update_a) {
 #ifndef NDEBUG
             const double pa_prev = pa;
 #endif
-            ctx.a.next();
-            pa = ctx.a.i * pa_step;
-            assert(pa_prev <= pa);
-            va = ctx.a.unique_value();
+            ctx.a_next.next();
+            pa = ctx.a_next.i * pa_step;
+            assert(pa_prev < pa);
         }
-        else {
+
+        if (update_b) {
 #ifndef NDEBUG
             const double pb_prev = pb;
 #endif
-            ctx.b.next();
-            pb = ctx.b.i * pb_step;
-            assert(pb_prev <= pb);
-            vb = ctx.b.unique_value();
+            ctx.b_next.next();
+            pb = ctx.b_next.i * pb_step;
+            assert(pb_prev < pb);
         }
 
-        // get kstest
-        ctx.max_pdiff = std::max(ctx.max_pdiff, std::abs(pa - pb));
-        assert(ctx.max_pdiff > 0.0);
-        assert(ctx.max_pdiff <= 1.0);
-
-        // abort if remaining points cannot produce higher kstest value
+        // check if remaining points cannot produce higher kstest value
+        // - if so, wind up ctx.a.i,b to len_a,b w/o calculating max_pdiff
+        // - return
         const double max_max_pdiff = 1.0 - std::min(pa, pb);
         if (max_max_pdiff < ctx.max_pdiff) {
+            while (!ctx.a_next.done()) {
+                ctx.a_next.next();
+            }
+            while (!ctx.b_next.done()) {
+                ctx.b_next.next();
+            }
+            pa = ctx.a_next.i * pa_step;
+            pb = ctx.b_next.i * pb_step;
             break;
         }
     }
+
+    // debug
+    std::cout << "func = kstest()" << std::endl;
+    std::cout << "cdf_a:" << ctx.a_next.cdf.to_string() << std::endl;
+    std::cout << "cdf_b:" << ctx.b_next.cdf.to_string() << std::endl;
+    std::cout << "ctx:" << std::endl;
+    std::cout << ctx.to_string() << std::endl;
+    std::cout << "pa: " << pa << std::endl;
+    std::cout << "pb: " << pb << std::endl;
+
+    const double float_err = std::min(pa_step, pb_step) / 10;
+    assert(pa + float_err >= 1.0);
+    assert(pb + float_err >= 1.0);
 
     assert(ctx.max_pdiff >= 0.0);
     assert(ctx.max_pdiff <= 1.0);
@@ -952,8 +967,8 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 // calculate kstest over whole range
 double kstest(KstestCtx& ctx)
 {
-    const size_t len_a = ctx.a.cdf.size();
-    const size_t len_b = ctx.b.cdf.size();
+    const size_t len_a = ctx.a_next.cdf.size();
+    const size_t len_b = ctx.b_next.cdf.size();
     return kstest(ctx, len_a, len_b);
 }
 
