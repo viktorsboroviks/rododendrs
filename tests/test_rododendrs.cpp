@@ -102,32 +102,8 @@ void test_kstest_same()
     assert(cdf_a.size() == len);
     assert(cdf_b.size() == len);
 
-    assert(rododendrs::kstest(cdf_a, cdf_b) == 0.0);
-}
-
-void test_kstest_match()
-{
-    // test cdf of matching random values
-    const double v_min   = -100;
-    const double v_max   = 100;
-    const size_t len_min = 1;
-    const size_t len_max = 1000;
-
-    rododendrs::CDF cdf_a;
-    rododendrs::CDF cdf_b;
-    assert(cdf_a.empty());
-    assert(cdf_b.empty());
-
-    const size_t len = rododendrs::rnd_in_range<size_t>(len_min, len_max);
-    for (size_t i = 0; i < len; i++) {
-        const double v = rododendrs::rnd_in_range<double>(v_min, v_max);
-        cdf_a.insert(v);
-        cdf_b.insert(v);
-    }
-    assert(cdf_a.size() == len);
-    assert(cdf_b.size() == len);
-
-    assert(rododendrs::kstest(cdf_a, cdf_b) == 0.0);
+    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
+    assert(kstest == 0);
 }
 
 void test_kstest_not_same()
@@ -162,6 +138,65 @@ void test_kstest_not_same()
     assert(kstest + float_err > 1.0);
 }
 
+void test_kstest_match_rnd()
+{
+    // test cdf of matching random values
+    const double v_min   = -100;
+    const double v_max   = 100;
+    const size_t len_min = 1;
+    const size_t len_max = 1000;
+
+    rododendrs::CDF cdf_a;
+    rododendrs::CDF cdf_b;
+    assert(cdf_a.empty());
+    assert(cdf_b.empty());
+
+    const size_t len = rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    for (size_t i = 0; i < len; i++) {
+        const double v = rododendrs::rnd_in_range<double>(v_min, v_max);
+        cdf_a.insert(v);
+        cdf_b.insert(v);
+    }
+    assert(cdf_a.size() == len);
+    assert(cdf_b.size() == len);
+
+    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
+    assert(kstest == 0);
+}
+
+void test_kstest_match_rnd_n()
+{
+    // test cdf of matching random values with matching random occurence
+    const double v_min   = -100;
+    const double v_max   = 100;
+    const double n_min   = -10;
+    const double n_max   = 10;
+    const size_t len_min = 1;
+    const size_t len_max = 1000;
+
+    rododendrs::CDF cdf_a;
+    rododendrs::CDF cdf_b;
+    assert(cdf_a.empty());
+    assert(cdf_b.empty());
+
+    const size_t len = rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    size_t total_len = 0;
+    for (size_t i = 0; i < len; i++) {
+        const double v = rododendrs::rnd_in_range<double>(v_min, v_max);
+        const double n = rododendrs::rnd_in_range<double>(n_min, n_max);
+        for (size_t j = 0; j < n; j++) {
+            cdf_a.insert(v);
+            cdf_b.insert(v);
+            total_len++;
+        }
+    }
+    assert(cdf_a.size() == total_len);
+    assert(cdf_b.size() == total_len);
+
+    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
+    assert(kstest == 0);
+}
+
 int main()
 {
     const size_t test_n = 100;
@@ -177,8 +212,9 @@ int main()
         test_kstest_fail();
 #endif
         test_kstest_same();
-        test_kstest_match();
         test_kstest_not_same();
+        test_kstest_match_rnd();
+        test_kstest_match_rnd_n();
     }
 
     std::cout << "all tests passed" << std::endl;
