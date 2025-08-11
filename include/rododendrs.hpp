@@ -946,6 +946,7 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
         }
     }
 
+#if 0
     // debug
     std::cout << "func = kstest()" << std::endl;
     std::cout << "cdf_a:" << ctx.a_next.cdf.to_string() << std::endl;
@@ -954,6 +955,7 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
     std::cout << ctx.to_string() << std::endl;
     std::cout << "pa: " << pa << std::endl;
     std::cout << "pb: " << pb << std::endl;
+#endif
 
     const double float_err = std::min(pa_step, pb_step) / 10;
     assert(pa + float_err >= 1.0);
