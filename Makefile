@@ -8,7 +8,7 @@
 	clean \
 	distclean
 
-all: benchmarks
+all: benchmarks tests
 
 venv: requirements.txt
 	python3 -m venv venv
@@ -34,18 +34,28 @@ sampling_f.o: \
 sampling_f.csv: sampling_f.o
 	./sampling_f.o > $@
 
+tests: test_rododendrs.o
+
+test_rododendrs.o: tests/test_rododendrs.cpp
+	g++ -Wall -Wextra -Werror -Wpedantic \
+		-std=c++20 -O3 \
+		-I./include \
+		tests/test_rododendrs.cpp -o $@
+
 format: format-cpp
 
 format-cpp: \
 		include/rododendrs.hpp \
-		benchmarks/sampling_f/sampling_f.cpp
+		benchmarks/sampling_f/sampling_f.cpp \
+		tests/test_rododendrs.cpp
 	clang-format -i $^
 
 lint: lint-cpp
 
 lint-cpp: \
 		include/rododendrs.hpp \
-		benchmarks/sampling_f/sampling_f.cpp
+		benchmarks/sampling_f/sampling_f.cpp \
+		tests/test_rododendrs.cpp
 	cppcheck \
 		--enable=warning,portability,performance \
 		--enable=style,information \
