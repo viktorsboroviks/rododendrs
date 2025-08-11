@@ -781,7 +781,10 @@ struct CdfCtx {
 
     void next()
     {
-        i++;
+        const double val_prev = val();
+        do {
+            i++;
+        } while (i < len || val() == val_prev);
         assert(i <= len);
     }
 
