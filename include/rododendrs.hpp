@@ -141,6 +141,12 @@ double rnd01_norm()
     return rnd_norm(0.0, 1.0 / 3.0, -1.0, 1.0);
 }
 
+template <typename T>
+bool approx_equal(const T& a, const T& b, T float_err = 1e-5)
+{
+    return std::abs(a - b) < float_err;
+}
+
 // r-squared, coefficient of determination
 template <template <typename...> typename P, template <typename...> typename C>
 double r2(const P<double>& predicted, const C<double>& correct)
@@ -981,9 +987,8 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 #endif
     }
 
-    const double float_err = std::min(pa_step, pb_step) / 10;
-    assert(pa + float_err >= 1.0);
-    assert(pb + float_err >= 1.0);
+    assert(rododendrs::approx_equal<double>(pa, 1.0));
+    assert(rododendrs::approx_equal<double>(pb, 1.0));
 
     assert(ctx.max_pdiff >= 0.0);
     assert(ctx.max_pdiff <= 1.0);
@@ -1003,12 +1008,6 @@ double kstest(const CDF& cdf_a, const CDF& cdf_b)
 {
     KstestCtx ctx(cdf_a, cdf_b);
     return kstest(ctx);
-}
-
-template <typename T>
-bool float_eq(const T& a, const T& b, T float_err = 1e-5)
-{
-    return std::abs(a - b) < float_err;
 }
 
 }  // namespace rododendrs
