@@ -354,6 +354,118 @@ void test_kstest_match_rnd_vals_nomatch_rnd_n()
     assert(rododendrs::float_eq<double>(kstest, pdiff_max));
 }
 
+void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
+{
+    // test cdf of not matching rnd values with not matching rnd n
+    const double v_min   = -10;
+    const double v_max   = 10;
+    const size_t n_min   = 1;
+    const size_t n_max   = 5;
+    const size_t len_min = 1;
+    const size_t len_max = 3;
+
+    rododendrs::CDF cdf_a;
+    rododendrs::CDF cdf_b;
+    assert(cdf_a.empty());
+    assert(cdf_b.empty());
+
+    const size_t len_a = rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    const size_t len_b = rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    size_t total_len_a = 0;
+    size_t total_len_b = 0;
+    std::deque<double> a_vnew;
+    std::deque<double> b_vnew;
+    std::deque<double> ia_vnew;
+    std::deque<double> ib_vnew;
+
+    // init cdf_a
+    double v_prev = v_min;
+    for (size_t i = 0; i < len_a; i++) {
+        double v;
+        do {
+            v = rododendrs::rnd_in_range<double>(v_min, v_max);
+        } while (v <= v_prev);
+        assert(v > v_prev);
+        v_prev         = v;
+        const size_t n = rododendrs::rnd_in_range<size_t>(n_min, n_max);
+        for (size_t j = 0; j < n; j++) {
+            cdf_a.insert(v);
+            total_len_a++;
+        }
+
+        a_vnew.push_back(v);
+        ia_vnew.push_back(total_len_a);
+    }
+    assert(cdf_a.size() == total_len_a);
+
+    // init cdf_b
+    v_prev = v_min;
+    for (size_t i = 0; i < len_b; i++) {
+        double v;
+        do {
+            v = rododendrs::rnd_in_range<double>(v_min, v_max);
+        } while (v <= v_prev);
+        assert(v > v_prev);
+        v_prev         = v;
+        const size_t n = rododendrs::rnd_in_range<size_t>(n_min, n_max);
+        for (size_t j = 0; j < n; j++) {
+            cdf_b.insert(v);
+            total_len_b++;
+        }
+
+        b_vnew.push_back(v);
+        ib_vnew.push_back(total_len_b);
+    }
+    assert(cdf_b.size() == total_len_b);
+
+    // real kstest
+    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
+
+    // test kstest
+    const double pa_step = 1.0 / static_cast<double>(total_len_a);
+    const double pb_step = 1.0 / static_cast<double>(total_len_b);
+    double pdiff_max     = 0;
+    double pa            = 0;
+    double pb            = 0;
+    while (true) {
+        pdiff_max = std::max(pdiff_max, std::abs(pa - pb));
+
+        // get next pa, pb
+        bool update_a = false;
+        bool update_b = false;
+        if (!a_vnew.empty() && !b_vnew.empty() &&
+            (a_vnew.front() == b_vnew.front())) {
+            update_a = true;
+            update_b = true;
+        }
+        else if (!a_vnew.empty() &&
+                 (b_vnew.empty() || (a_vnew.front() < b_vnew.front()))) {
+            update_a = true;
+        }
+        else if (!b_vnew.empty()) {
+            update_b = true;
+        }
+        else {
+            break;
+        }
+
+        if (update_a) {
+            assert(!a_vnew.empty());
+            pa = ia_vnew.front() * pa_step;
+            a_vnew.pop_front();
+            ia_vnew.pop_front();
+        }
+        if (update_b) {
+            assert(!b_vnew.empty());
+            pb = ib_vnew.front() * pb_step;
+            b_vnew.pop_front();
+            ib_vnew.pop_front();
+        }
+    }
+
+    assert(rododendrs::float_eq<double>(kstest, pdiff_max));
+}
+
 int main()
 {
     const size_t test_n = 100;
@@ -370,11 +482,9 @@ int main()
         test_kstest_match_rnd_n();
         test_kstest_match_rnd_n_len_diff();
         test_kstest_match_rnd_vals_nomatch_rnd_n();
+        test_kstest_nomatch_rnd_vals_nomatch_rnd_n();
         // TODO: add
-        // - samve vals, different len a,b
-        // - same vals, rnd n, calc max = kstest
-        // - mixed vals, rnd n, calc max = kstest
-        // - nexted kctx with interrupts at arbitrary place/in the middle of
+        // - nested kctx with interrupts at arbitrary place/in the middle of
         //   unique_val stack
     }
 
