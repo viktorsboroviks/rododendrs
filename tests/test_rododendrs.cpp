@@ -462,19 +462,14 @@ void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
             ib_vnew.pop_front();
         }
     }
+    assert(rododendrs::approx_equal<double>(pa, 1.0));
+    assert(rododendrs::approx_equal<double>(pb, 1.0));
 
     assert(rododendrs::approx_equal<double>(kstest, pdiff_max));
 }
 
 void test_kstest_nested_cdf()
 {
-    // TODO: add
-    //   - create big rnd nexted cdf
-    //   - create vector of nested smaller cdfs
-    //   - push data to both
-    //     - interrupt randomply in the middle of unique_val stack
-    //   - compare kstest from interrupted big cdf and smaller cdfs
-
     // nested kctx with interrupts at arbitrary place/in the middle of
     // unique_val stack
     const double v_min        = -10;
@@ -494,16 +489,13 @@ void test_kstest_nested_cdf()
     // init data
     const size_t n_nested =
             rododendrs::rnd_in_range<size_t>(n_nested_min, n_nested_max);
-    cdfs_a.reserve(n_nested);
-    cdfs_b.reserve(n_nested);
+    cdfs_a.resize(n_nested);
+    cdfs_b.resize(n_nested);
 
     // create nested cdfs
     double va_prev = v_min;
     double vb_prev = v_min;
     for (size_t i_nest = 0; i_nest < n_nested; i_nest++) {
-        cdfs_a.push_back(rododendrs::CDF());
-        cdfs_b.push_back(rododendrs::CDF());
-
         // a
         const size_t len_a =
                 rododendrs::rnd_in_range<size_t>(len_min, len_max);
@@ -547,11 +539,33 @@ void test_kstest_nested_cdf()
 
     // kstest check
     rododendrs::KstestCtx kctx(supercdf_a, supercdf_b);
-    for (size_t i_cdf = 0; i_cdf < n_nested; i_cdf++) {
-        const double kstest1 = rododendrs::kstest(
-                kctx, cdfs_a[i_cdf].size(), cdfs_b[i_cdf].size());
+    size_t prev_cdf_size_a = 0;
+    size_t prev_cdf_size_b = 0;
+    for (size_t i_cdf = n_nested - 1; i_cdf > 0; i_cdf--) {
+        assert(cdfs_a[i_cdf].size() >= prev_cdf_size_a);
+        assert(cdfs_b[i_cdf].size() >= prev_cdf_size_b);
+        assert(!cdfs_a[i_cdf].empty());
+        assert(!cdfs_b[i_cdf].empty());
+        prev_cdf_size_a = cdfs_a[i_cdf].size();
+        prev_cdf_size_b = cdfs_b[i_cdf].size();
+
+        for (size_t i = 0; i < cdfs_a[i_cdf].size(); i++) {
+            assert(cdfs_a[i_cdf].sorted_values[i] ==
+                   supercdf_a.sorted_values[i]);
+        }
+        for (size_t i = 0; i < cdfs_b[i_cdf].size(); i++) {
+            assert(cdfs_b[i_cdf].sorted_values[i] ==
+                   supercdf_b.sorted_values[i]);
+        }
+
+        kctx.a_next.init(0, cdfs_a[i_cdf].size());
+        kctx.b_next.init(0, cdfs_b[i_cdf].size());
+        const double kstest1 = rododendrs::kstest(kctx);
+        assert(kctx.max_pdiff == kstest1);
+
         const double kstest2 =
                 rododendrs::kstest(cdfs_a[i_cdf], cdfs_b[i_cdf]);
+
         assert(rododendrs::approx_equal<double>(kstest1, kstest2));
     }
 }
@@ -564,7 +578,7 @@ int main()
         test_cdf();
         test_cdfctx();
 #if 0
-                test_kstest_fail();
+                        test_kstest_fail();
 #endif
         test_kstest_same();
         test_kstest_not_same();
