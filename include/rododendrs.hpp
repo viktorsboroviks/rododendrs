@@ -777,15 +777,15 @@ struct CdfCtx {
 
     void reset()
     {
-        i      = 0;
-        i_vnew = 0;
+        i      = i_begin;
+        i_vnew = i_begin;
     }
 
-    void init(size_t begin = 0, size_t end = 0)
+    void resize(size_t begin = 0, size_t end = 0)
     {
-        i       = 0;
-        i_vnew  = 0;
         i_begin = begin;
+        i       = i_begin;
+        i_vnew  = i_begin;
         if (end == 0) {
             i_end = cdf.size();
         }
@@ -798,7 +798,7 @@ struct CdfCtx {
     explicit CdfCtx(const CDF& cdf, size_t begin = 0, size_t end = 0) :
         cdf(cdf)
     {
-        init(begin, end);
+        resize(begin, end);
     }
 
     void next()
@@ -874,8 +874,8 @@ struct KstestCtx {
         a_next(cdf_a),
         b_next(cdf_b)
     {
-        a_next.init();
-        b_next.init();
+        a_next.resize();
+        b_next.resize();
     }
 
     double update_max_pdiff()

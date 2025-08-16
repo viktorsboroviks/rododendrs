@@ -558,8 +558,8 @@ void test_kstest_nested_cdf()
                    supercdf_b.sorted_values[i]);
         }
 
-        kctx.a_next.init(0, cdfs_a[i_cdf].size());
-        kctx.b_next.init(0, cdfs_b[i_cdf].size());
+        kctx.a_next.resize(0, cdfs_a[i_cdf].size());
+        kctx.b_next.resize(0, cdfs_b[i_cdf].size());
         const double kstest1 = rododendrs::kstest(kctx);
         assert(kctx.max_pdiff == kstest1);
 
