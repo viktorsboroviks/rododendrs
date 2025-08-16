@@ -867,7 +867,6 @@ struct CdfCtx {
 struct KstestCtx {
     CdfCtx a_next;
     CdfCtx b_next;
-
     double max_pdiff = 0;
 
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
@@ -876,6 +875,13 @@ struct KstestCtx {
     {
         a_next.resize();
         b_next.resize();
+    }
+
+    void reset()
+    {
+        a_next.reset();
+        b_next.reset();
+        max_pdiff = 0;
     }
 
     double update_max_pdiff()
