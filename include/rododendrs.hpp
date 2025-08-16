@@ -770,22 +770,25 @@ public:
 
 struct CdfCtx {
     const CDF& cdf;
-    size_t i_begin = 0;
-    size_t i_end   = 0;
-    size_t i       = 0;
-    size_t i_vnew  = 0;
+    size_t i_begin     = 0;
+    size_t i_end       = 0;
+    size_t i           = 0;
+    size_t i_vnew      = 0;
+    size_t i_max_pdiff = 0;
 
     void reset()
     {
-        i      = 0;
-        i_vnew = 0;
+        i           = i_begin;
+        i_vnew      = i_begin;
+        i_max_pdiff = i_begin;
     }
 
     void init(size_t begin = 0, size_t end = 0)
     {
-        i       = 0;
-        i_vnew  = 0;
-        i_begin = begin;
+        i_begin     = begin;
+        i           = i_begin;
+        i_vnew      = i_begin;
+        i_max_pdiff = i_begin;
         if (end == 0) {
             i_end = cdf.size();
         }
@@ -799,6 +802,16 @@ struct CdfCtx {
         cdf(cdf)
     {
         init(begin, end);
+    }
+
+    CdfCtx& operator=(const CdfCtx& other)
+    {
+        i_begin     = other.i_begin;
+        i_end       = other.i_end;
+        i           = other.i;
+        i_vnew      = other.i_vnew;
+        i_max_pdiff = other.i_max_pdiff;
+        return *this;
     }
 
     void next()
@@ -840,25 +853,33 @@ struct CdfCtx {
         return _p_step;
     }
 
-    double p() const
+    double p(size_t idx) const
     {
-        const double _p = static_cast<double>(i) * p_step();
+        assert(idx >= i_begin);
+        assert(idx <= i_end);
+        const double _p = static_cast<double>(idx) * p_step();
         assert(_p >= 0.0);
         assert(_p <= 1.0);
         return _p;
+    }
+
+    double p() const
+    {
+        return p(i);
     }
 
     std::string to_string() const
     {
         std::stringstream ss{};
         // clang-format off
-        ss << "  begin: "   << i_begin   << std::endl;
-        ss << "  end: "     << i_end     << std::endl;
-        ss << "  is_end: "  << is_end()  << std::endl;
-        ss << "  i: "       << i         << std::endl;
-        ss << "  i_vnew: "  << i_vnew    << std::endl;
-        ss << "  p_step: "  << p_step()  << std::endl;
-        ss << "  p: "       << p()       << std::endl;
+        ss << "  begin: "       << i_begin      << std::endl;
+        ss << "  end: "         << i_end        << std::endl;
+        ss << "  is_end: "      << is_end()     << std::endl;
+        ss << "  i: "           << i            << std::endl;
+        ss << "  i_vnew: "      << i_vnew       << std::endl;
+        ss << "  i_max_pdiff: " << i_max_pdiff  << std::endl;
+        ss << "  p_step: "      << p_step()     << std::endl;
+        ss << "  p: "           << p()          << std::endl;
         // clang-format on
         return ss.str();
     }
@@ -867,15 +888,32 @@ struct CdfCtx {
 struct KstestCtx {
     CdfCtx a_next;
     CdfCtx b_next;
+    CdfCtx a_saved;
+    CdfCtx b_saved;
 
     double max_pdiff = 0;
 
+    void save()
+    {
+        a_saved = a_next;
+        b_saved = b_next;
+    }
+
+    void restore()
+    {
+        a_next = a_saved;
+        b_next = b_saved;
+    }
+
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
         a_next(cdf_a),
-        b_next(cdf_b)
+        b_next(cdf_b),
+        a_saved(cdf_a),
+        b_saved(cdf_b)
     {
         a_next.init();
         b_next.init();
+        save();
     }
 
     double update_max_pdiff()
@@ -883,10 +921,47 @@ struct KstestCtx {
         const double pa = a_next.p();
         const double pb = b_next.p();
 
-        max_pdiff = std::max(max_pdiff, std::abs(pa - pb));
+        const double pdiff = std::abs(pa - pb);
+        if (pdiff > max_pdiff) {
+            if (!a_next.is_end() && !b_next.is_end()) {
+                save();
+            }
+            a_next.i_max_pdiff = a_next.i;
+            b_next.i_max_pdiff = b_next.i;
+            max_pdiff          = pdiff;
+        }
         assert(max_pdiff >= 0.0);
         assert(max_pdiff <= 1.0);
         return max_pdiff;
+    }
+
+    void reset()
+    {
+        a_next.reset();
+        b_next.reset();
+        max_pdiff = 0;
+        save();
+    }
+
+    void resize(size_t a_end, size_t b_end)
+    {
+        if (a_end < a_next.i_end || b_end < b_next.i_end) {
+            reset();
+            std::cout << "reset!" << std::endl;
+            a_next.i_end = a_end;
+            b_next.i_end = b_end;
+            return;
+        }
+
+        restore();
+        std::cout << "restore!" << std::endl;
+        a_next.i_end = a_end;
+        b_next.i_end = b_end;
+
+        // recalculate max_pdiff
+        const double pa = a_next.p(a_next.i_max_pdiff);
+        const double pb = b_next.p(b_next.i_max_pdiff);
+        max_pdiff       = std::abs(pa - pb);
     }
 
     std::string to_string() const
@@ -904,11 +979,18 @@ struct KstestCtx {
 };
 
 // calculate kstest until end_i
-double kstest(KstestCtx& ctx)
+double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 {
-    assert(ctx.a_next.is_begin());
-    assert(ctx.b_next.is_begin());
-    ctx.max_pdiff = 0;
+    ctx.resize(len_a, len_b);
+    assert(ctx.a_next.i_end == len_a);
+    assert(ctx.b_next.i_end == len_b);
+
+    std::cout << "in kstest - after resize) " << std::endl;
+    std::cout << "\ta: " << ctx.a_next.i_max_pdiff << "/" << ctx.a_next.i_end << std::endl;
+    std::cout << "\tb: " << ctx.b_next.i_max_pdiff << "/" << ctx.b_next.i_end << std::endl;
+    std::cout << ctx.max_pdiff << std::endl;
+    std::cout << "\tai: " << ctx.a_next.i << std::endl;
+    std::cout << "\tbi: " << ctx.b_next.i << std::endl;
 
     while (true) {
         // update max p diff
@@ -968,16 +1050,23 @@ double kstest(KstestCtx& ctx)
         }
     }
 
+    assert(ctx.a_next.is_end());
+    assert(ctx.b_next.is_end());
     assert(rododendrs::approx_equal<double>(ctx.a_next.p(), 1.0));
     assert(rododendrs::approx_equal<double>(ctx.b_next.p(), 1.0));
     return ctx.max_pdiff;
+}
+
+double kstest(KstestCtx& ctx)
+{
+    return kstest(ctx, ctx.a_next.cdf.size(), ctx.b_next.cdf.size());
 }
 
 // calculate kstest over whole range
 double kstest(const CDF& cdf_a, const CDF& cdf_b)
 {
     KstestCtx ctx(cdf_a, cdf_b);
-    return kstest(ctx);
+    return kstest(ctx, cdf_a.size(), cdf_b.size());
 }
 
 }  // namespace rododendrs

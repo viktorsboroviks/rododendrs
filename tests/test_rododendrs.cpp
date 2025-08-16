@@ -468,6 +468,72 @@ void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
     assert(rododendrs::approx_equal<double>(kstest, pdiff_max));
 }
 
+void test_kstest_save_restore()
+{
+    // compare saved/restored kstest with vanilla version
+    const double v_min        = -10;
+    const double v_max        = 10;
+    const size_t n_min        = 1;
+    const size_t n_max        = 5;
+    const size_t len_min      = 1;
+    const size_t len_max      = 3;
+
+    rododendrs::CDF cdf_a;
+    rododendrs::CDF cdf_b;
+
+    // a
+    const size_t len_a =
+            rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    double v_prev = v_min;
+    for (size_t i = 0; i < len_a; i++) {
+        double v;
+        do {
+            v = rododendrs::rnd_in_range<double>(
+                    v_min, (v_max / len_a) * (i + 1));
+        } while (v <= v_prev);
+        assert(v > v_prev);
+        v_prev        = v;
+        const size_t n = rododendrs::rnd_in_range<size_t>(n_min, n_max);
+        for (size_t j = 0; j < n; j++) {
+            cdf_a.insert(v);
+        }
+    }
+
+    // b
+    const size_t len_b =
+            rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    v_prev = v_min;
+    for (size_t i = 0; i < len_b; i++) {
+        double v;
+        do {
+            v = rododendrs::rnd_in_range<double>(
+                    v_min, (v_max / len_b) * (i + 1));
+        } while (v <= v_prev);
+        assert(v > v_prev);
+        v_prev        = v;
+        const size_t n = rododendrs::rnd_in_range<size_t>(n_min, n_max);
+        for (size_t j = 0; j < n; j++) {
+            cdf_b.insert(v);
+        }
+    }
+
+    const double kstest_ref = rododendrs::kstest(cdf_a, cdf_b);
+    rododendrs::KstestCtx kctx(cdf_a, cdf_b);
+
+    const double kstest_first = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    kctx.reset();
+    const double kstest_reset = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    kctx.restore();
+    const double kstest_restore = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    kctx.resize(cdf_a.size(), cdf_b.size());
+    const double kstest_resize = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+
+    assert(rododendrs::approx_equal<double>(kstest_ref, kstest_first));
+    assert(rododendrs::approx_equal<double>(kstest_ref, kstest_reset));
+    assert(rododendrs::approx_equal<double>(kstest_ref, kstest_restore));
+    assert(rododendrs::approx_equal<double>(kstest_ref, kstest_resize));
+}
+
 void test_kstest_nested_cdf()
 {
     // nested kctx with interrupts at arbitrary place/in the middle of
@@ -539,9 +605,11 @@ void test_kstest_nested_cdf()
 
     // kstest check
     rododendrs::KstestCtx kctx(supercdf_a, supercdf_b);
+    rododendrs::KstestCtx kctx_reset(supercdf_a, supercdf_b);
     size_t prev_cdf_size_a = 0;
     size_t prev_cdf_size_b = 0;
     for (size_t i_cdf = n_nested - 1; i_cdf > 0; i_cdf--) {
+        std::cout << "i_cdf: " << i_cdf << std::endl;
         assert(cdfs_a[i_cdf].size() >= prev_cdf_size_a);
         assert(cdfs_b[i_cdf].size() >= prev_cdf_size_b);
         assert(!cdfs_a[i_cdf].empty());
@@ -558,15 +626,69 @@ void test_kstest_nested_cdf()
                    supercdf_b.sorted_values[i]);
         }
 
-        kctx.a_next.init(0, cdfs_a[i_cdf].size());
-        kctx.b_next.init(0, cdfs_b[i_cdf].size());
-        const double kstest1 = rododendrs::kstest(kctx);
+        assert(kctx.a_next.i == kctx_reset.a_next.i);
+        assert(kctx.b_next.i == kctx_reset.b_next.i);
+        assert(kctx.a_next.i_vnew == kctx_reset.a_next.i_vnew);
+        assert(kctx.b_next.i_vnew == kctx_reset.b_next.i_vnew);
+        assert(kctx.a_next.i_max_pdiff == kctx_reset.a_next.i_max_pdiff);
+        assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
+
+        std::cout << "ctx - before kstest) " << std::endl;
+        std::cout << "\ta: " << kctx.a_next.i_max_pdiff << "/" << kctx.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx.b_next.i_max_pdiff << "/" << kctx.b_next.i_end << std::endl;
+        std::cout << kctx.max_pdiff << std::endl;
+        const double kstest1 = rododendrs::kstest(
+                kctx,
+                cdfs_a[i_cdf].size(),
+                cdfs_b[i_cdf].size());
+        assert(kctx.a_next.i == kctx.a_next.i_end);
+        assert(kctx.b_next.i == kctx.b_next.i_end);
         assert(kctx.max_pdiff == kstest1);
 
-        const double kstest2 =
+        std::cout << "ctx - after kstest) " << std::endl;
+        std::cout << "\ta: " << kctx.a_next.i_max_pdiff << "/" << kctx.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx.b_next.i_max_pdiff << "/" << kctx.b_next.i_end << std::endl;
+        std::cout << kctx.max_pdiff << std::endl;
+
+        std::cout << "ref - before reset) " << std::endl;
+        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/" << kctx_reset.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/" << kctx_reset.b_next.i_end << std::endl;
+        std::cout << kctx_reset.max_pdiff << std::endl;
+
+        kctx_reset.reset();
+        std::cout << "ref - after reset) " << std::endl;
+        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/" << kctx_reset.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/" << kctx_reset.b_next.i_end << std::endl;
+        std::cout << kctx_reset.max_pdiff << std::endl;
+
+        const double kstest2 = rododendrs::kstest(
+                kctx_reset,
+                cdfs_a[i_cdf].size(),
+                cdfs_b[i_cdf].size());
+        std::cout << "ref - after kstest) " << std::endl;
+        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/" << kctx_reset.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/" << kctx_reset.b_next.i_end << std::endl;
+        std::cout << kctx_reset.max_pdiff << std::endl;
+        assert(kctx.a_next.i_begin == kctx_reset.a_next.i_begin);
+        assert(kctx.a_next.i_end == kctx_reset.a_next.i_end);
+        assert(kctx.b_next.i_begin == kctx_reset.b_next.i_begin);
+        assert(kctx.b_next.i_end == kctx_reset.b_next.i_end);
+        assert(kctx_reset.a_next.i == kctx_reset.a_next.i_end);
+        assert(kctx_reset.b_next.i == kctx_reset.b_next.i_end);
+        assert(kctx_reset.max_pdiff == kstest2);
+
+        assert(kctx.a_next.i == kctx_reset.a_next.i);
+        assert(kctx.b_next.i == kctx_reset.b_next.i);
+        assert(kctx.a_next.i_vnew == kctx_reset.a_next.i_vnew);
+        assert(kctx.b_next.i_vnew == kctx_reset.b_next.i_vnew);
+        assert(kctx.a_next.i_max_pdiff == kctx_reset.a_next.i_max_pdiff);
+        assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
+
+        const double kstest3 =
                 rododendrs::kstest(cdfs_a[i_cdf], cdfs_b[i_cdf]);
 
         assert(rododendrs::approx_equal<double>(kstest1, kstest2));
+        assert(rododendrs::approx_equal<double>(kstest2, kstest3));
     }
 }
 
@@ -587,6 +709,7 @@ int main()
         test_kstest_match_rnd_n_len_diff();
         test_kstest_match_rnd_vals_nomatch_rnd_n();
         test_kstest_nomatch_rnd_vals_nomatch_rnd_n();
+        test_kstest_save_restore();
         test_kstest_nested_cdf();
     }
 
