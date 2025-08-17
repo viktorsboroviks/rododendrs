@@ -471,28 +471,27 @@ void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
 void test_kstest_save_restore()
 {
     // compare saved/restored kstest with vanilla version
-    const double v_min        = -10;
-    const double v_max        = 10;
-    const size_t n_min        = 1;
-    const size_t n_max        = 5;
-    const size_t len_min      = 1;
-    const size_t len_max      = 3;
+    const double v_min   = -10;
+    const double v_max   = 10;
+    const size_t n_min   = 1;
+    const size_t n_max   = 5;
+    const size_t len_min = 1;
+    const size_t len_max = 3;
 
     rododendrs::CDF cdf_a;
     rododendrs::CDF cdf_b;
 
     // a
-    const size_t len_a =
-            rododendrs::rnd_in_range<size_t>(len_min, len_max);
-    double v_prev = v_min;
+    const size_t len_a = rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    double v_prev      = v_min;
     for (size_t i = 0; i < len_a; i++) {
         double v;
         do {
-            v = rododendrs::rnd_in_range<double>(
-                    v_min, (v_max / len_a) * (i + 1));
+            v = rododendrs::rnd_in_range<double>(v_min,
+                                                 (v_max / len_a) * (i + 1));
         } while (v <= v_prev);
         assert(v > v_prev);
-        v_prev        = v;
+        v_prev         = v;
         const size_t n = rododendrs::rnd_in_range<size_t>(n_min, n_max);
         for (size_t j = 0; j < n; j++) {
             cdf_a.insert(v);
@@ -500,17 +499,16 @@ void test_kstest_save_restore()
     }
 
     // b
-    const size_t len_b =
-            rododendrs::rnd_in_range<size_t>(len_min, len_max);
-    v_prev = v_min;
+    const size_t len_b = rododendrs::rnd_in_range<size_t>(len_min, len_max);
+    v_prev             = v_min;
     for (size_t i = 0; i < len_b; i++) {
         double v;
         do {
-            v = rododendrs::rnd_in_range<double>(
-                    v_min, (v_max / len_b) * (i + 1));
+            v = rododendrs::rnd_in_range<double>(v_min,
+                                                 (v_max / len_b) * (i + 1));
         } while (v <= v_prev);
         assert(v > v_prev);
-        v_prev        = v;
+        v_prev         = v;
         const size_t n = rododendrs::rnd_in_range<size_t>(n_min, n_max);
         for (size_t j = 0; j < n; j++) {
             cdf_b.insert(v);
@@ -520,13 +518,17 @@ void test_kstest_save_restore()
     const double kstest_ref = rododendrs::kstest(cdf_a, cdf_b);
     rododendrs::KstestCtx kctx(cdf_a, cdf_b);
 
-    const double kstest_first = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    const double kstest_first =
+            rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
     kctx.reset();
-    const double kstest_reset = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    const double kstest_reset =
+            rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
     kctx.restore();
-    const double kstest_restore = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    const double kstest_restore =
+            rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
     kctx.resize(cdf_a.size(), cdf_b.size());
-    const double kstest_resize = rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
+    const double kstest_resize =
+            rododendrs::kstest(kctx, cdf_a.size(), cdf_b.size());
 
     assert(rododendrs::approx_equal<double>(kstest_ref, kstest_first));
     assert(rododendrs::approx_equal<double>(kstest_ref, kstest_reset));
@@ -606,22 +608,24 @@ void test_kstest_nested_cdf()
     // kstest check
     rododendrs::KstestCtx kctx(supercdf_a, supercdf_b);
     rododendrs::KstestCtx kctx_reset(supercdf_a, supercdf_b);
-    size_t prev_cdf_size_a = 0;
-    size_t prev_cdf_size_b = 0;
+    size_t prev_cdf_len_a = 0;
+    size_t prev_cdf_len_b = 0;
     for (size_t i_cdf = n_nested - 1; i_cdf > 0; i_cdf--) {
+        const size_t cdf_len_a = cdfs_a[i_cdf].size();
+        const size_t cdf_len_b = cdfs_b[i_cdf].size();
         std::cout << "i_cdf: " << i_cdf << std::endl;
-        assert(cdfs_a[i_cdf].size() >= prev_cdf_size_a);
-        assert(cdfs_b[i_cdf].size() >= prev_cdf_size_b);
+        assert(cdf_len_a >= prev_cdf_len_a);
+        assert(cdf_len_b >= prev_cdf_len_b);
         assert(!cdfs_a[i_cdf].empty());
         assert(!cdfs_b[i_cdf].empty());
-        prev_cdf_size_a = cdfs_a[i_cdf].size();
-        prev_cdf_size_b = cdfs_b[i_cdf].size();
+        prev_cdf_len_a = cdf_len_a;
+        prev_cdf_len_b = cdf_len_b;
 
-        for (size_t i = 0; i < cdfs_a[i_cdf].size(); i++) {
+        for (size_t i = 0; i < cdf_len_a; i++) {
             assert(cdfs_a[i_cdf].sorted_values[i] ==
                    supercdf_a.sorted_values[i]);
         }
-        for (size_t i = 0; i < cdfs_b[i_cdf].size(); i++) {
+        for (size_t i = 0; i < cdf_len_b; i++) {
             assert(cdfs_b[i_cdf].sorted_values[i] ==
                    supercdf_b.sorted_values[i]);
         }
@@ -634,40 +638,48 @@ void test_kstest_nested_cdf()
         assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
 
         std::cout << "ctx - before kstest) " << std::endl;
-        std::cout << "\ta: " << kctx.a_next.i_max_pdiff << "/" << kctx.a_next.i_end << std::endl;
-        std::cout << "\tb: " << kctx.b_next.i_max_pdiff << "/" << kctx.b_next.i_end << std::endl;
+        std::cout << "\ta: " << kctx.a_next.i_max_pdiff << "/"
+                  << kctx.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx.b_next.i_max_pdiff << "/"
+                  << kctx.b_next.i_end << std::endl;
         std::cout << kctx.max_pdiff << std::endl;
-        const double kstest1 = rododendrs::kstest(
-                kctx,
-                cdfs_a[i_cdf].size(),
-                cdfs_b[i_cdf].size());
+        const double kstest1 = rododendrs::kstest(kctx, cdf_len_a, cdf_len_b);
         assert(kctx.a_next.i == kctx.a_next.i_end);
         assert(kctx.b_next.i == kctx.b_next.i_end);
         assert(kctx.max_pdiff == kstest1);
 
+        kctx.a_next.cdf.to_csv("a_next.csv", cdf_len_a);
+        kctx.b_next.cdf.to_csv("b_next.csv", cdf_len_b);
+
         std::cout << "ctx - after kstest) " << std::endl;
-        std::cout << "\ta: " << kctx.a_next.i_max_pdiff << "/" << kctx.a_next.i_end << std::endl;
-        std::cout << "\tb: " << kctx.b_next.i_max_pdiff << "/" << kctx.b_next.i_end << std::endl;
+        std::cout << "\ta: " << kctx.a_next.i_max_pdiff << "/"
+                  << kctx.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx.b_next.i_max_pdiff << "/"
+                  << kctx.b_next.i_end << std::endl;
         std::cout << kctx.max_pdiff << std::endl;
 
         std::cout << "ref - before reset) " << std::endl;
-        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/" << kctx_reset.a_next.i_end << std::endl;
-        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/" << kctx_reset.b_next.i_end << std::endl;
+        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/"
+                  << kctx_reset.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/"
+                  << kctx_reset.b_next.i_end << std::endl;
         std::cout << kctx_reset.max_pdiff << std::endl;
 
         kctx_reset.reset();
         std::cout << "ref - after reset) " << std::endl;
-        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/" << kctx_reset.a_next.i_end << std::endl;
-        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/" << kctx_reset.b_next.i_end << std::endl;
+        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/"
+                  << kctx_reset.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/"
+                  << kctx_reset.b_next.i_end << std::endl;
         std::cout << kctx_reset.max_pdiff << std::endl;
 
-        const double kstest2 = rododendrs::kstest(
-                kctx_reset,
-                cdfs_a[i_cdf].size(),
-                cdfs_b[i_cdf].size());
+        const double kstest2 =
+                rododendrs::kstest(kctx_reset, cdf_len_a, cdf_len_b);
         std::cout << "ref - after kstest) " << std::endl;
-        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/" << kctx_reset.a_next.i_end << std::endl;
-        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/" << kctx_reset.b_next.i_end << std::endl;
+        std::cout << "\ta: " << kctx_reset.a_next.i_max_pdiff << "/"
+                  << kctx_reset.a_next.i_end << std::endl;
+        std::cout << "\tb: " << kctx_reset.b_next.i_max_pdiff << "/"
+                  << kctx_reset.b_next.i_end << std::endl;
         std::cout << kctx_reset.max_pdiff << std::endl;
         assert(kctx.a_next.i_begin == kctx_reset.a_next.i_begin);
         assert(kctx.a_next.i_end == kctx_reset.a_next.i_end);

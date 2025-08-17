@@ -1,6 +1,7 @@
 .PHONY: \
 	all \
 	benchmarks \
+	tests \
 	format \
 	format-cpp \
 	lint \
@@ -10,8 +11,9 @@
 
 all: benchmarks tests
 
+PYTHON_VERSION := python3.12
 venv: requirements.txt
-	python3 -m venv venv
+	$(PYTHON_VERSION) -m venv venv
 	./venv/bin/pip3 install --no-cache-dir --requirement requirements.txt
 
 vasarniica:
@@ -34,7 +36,11 @@ sampling_f.o: \
 sampling_f.csv: sampling_f.o
 	./sampling_f.o > $@
 
-tests: test_rododendrs.o
+tests: \
+		./tests/test_cdf.py \
+		test_rododendrs.o \
+		test_cdf.o
+	./venv/bin/python3 ./tests/test_cdf.py
 
 test_rododendrs.o: tests/test_rododendrs.cpp
 	g++ -Wall -Wextra -Werror -Wpedantic \
@@ -42,12 +48,19 @@ test_rododendrs.o: tests/test_rododendrs.cpp
 		-I./include \
 		tests/test_rododendrs.cpp -o $@
 
+test_cdf.o: tests/test_cdf.cpp
+	g++ -Wall -Wextra -Werror -Wpedantic \
+		-std=c++20 -O3 \
+		-I./include \
+		tests/test_cdf.cpp -o $@
+
 format: format-cpp
 
 format-cpp: \
 		include/rododendrs.hpp \
 		benchmarks/sampling_f/sampling_f.cpp \
-		tests/test_rododendrs.cpp
+		tests/test_rododendrs.cpp \
+		tests/test_cdf.cpp
 	clang-format -i $^
 
 lint: lint-cpp
@@ -55,7 +68,8 @@ lint: lint-cpp
 lint-cpp: \
 		include/rododendrs.hpp \
 		benchmarks/sampling_f/sampling_f.cpp \
-		tests/test_rododendrs.cpp
+		tests/test_rododendrs.cpp \
+		tests/test_cdf.cpp
 	cppcheck \
 		--enable=warning,portability,performance \
 		--enable=style,information \

@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <deque>
+#include <fstream>
 #include <limits>
 #include <random>
 #include <set>
@@ -539,6 +540,28 @@ struct CDF {
         }
         return ss.str();
     }
+
+    std::string to_csv(size_t len = 0) const
+    {
+        assert(len < sorted_values.size());
+        std::stringstream ss{};
+        ss << "i,v" << std::endl;
+        if (len == 0) {
+            len = sorted_values.size();
+        }
+        for (size_t i = 0; i < len; i++) {
+            ss << i << "," << sorted_values[i] << std::endl;
+        }
+        return ss.str();
+    }
+
+    void to_csv(const std::string& path, size_t len = 0) const
+    {
+        std::ofstream f;
+        f.open(path);
+        f << to_csv(len);
+        f.close();
+    }
 };
 
 template <typename T>
@@ -947,14 +970,12 @@ struct KstestCtx {
     {
         if (a_end < a_next.i_end || b_end < b_next.i_end) {
             reset();
-            std::cout << "reset!" << std::endl;
             a_next.i_end = a_end;
             b_next.i_end = b_end;
             return;
         }
 
         restore();
-        std::cout << "restore!" << std::endl;
         a_next.i_end = a_end;
         b_next.i_end = b_end;
 
@@ -985,12 +1006,16 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
     assert(ctx.a_next.i_end == len_a);
     assert(ctx.b_next.i_end == len_b);
 
+#if 0
     std::cout << "in kstest - after resize) " << std::endl;
-    std::cout << "\ta: " << ctx.a_next.i_max_pdiff << "/" << ctx.a_next.i_end << std::endl;
-    std::cout << "\tb: " << ctx.b_next.i_max_pdiff << "/" << ctx.b_next.i_end << std::endl;
+    std::cout << "\ta: " << ctx.a_next.i_max_pdiff << "/" << ctx.a_next.i_end
+              << std::endl;
+    std::cout << "\tb: " << ctx.b_next.i_max_pdiff << "/" << ctx.b_next.i_end
+              << std::endl;
     std::cout << ctx.max_pdiff << std::endl;
     std::cout << "\tai: " << ctx.a_next.i << std::endl;
     std::cout << "\tbi: " << ctx.b_next.i << std::endl;
+#endif
 
     while (true) {
         // update max p diff
