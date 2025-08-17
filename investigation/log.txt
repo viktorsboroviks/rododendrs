@@ -1,0 +1,175 @@
+i_cdf: 7
+ctx - before resize) 
+        a: 0/46
+        b: 0/64
+0
+ctx - after resize, before kstest) 
+        a: 0/4
+        b: 0/8
+0
+ctx - after kstest) 
+        a: 4/4
+        b: 0/8
+1
+ref - before reset) 
+        a: 0/46
+        b: 0/64
+0
+ref - after reset) 
+        a: 0/46
+        b: 0/64
+0
+ref - after kstest) 
+        a: 4/4
+        b: 0/8
+1
+i_cdf: 6
+ctx - before resize) 
+        a: 4/4
+        b: 0/8
+0
+ctx - after resize, before kstest) 
+        a: 0/11
+        b: 0/22
+0
+ctx - after kstest) 
+        a: 6/11
+        b: 0/22
+0.545455
+ref - before reset) 
+        a: 4/4
+        b: 0/8
+1
+ref - after reset) 
+        a: 0/4
+        b: 0/8
+0
+ref - after kstest) 
+        a: 6/11
+        b: 0/22
+0.545455
+i_cdf: 5
+ctx - before resize) 
+        a: 6/11
+        b: 0/22
+0.222222
+ctx - after resize, before kstest) 
+        a: 4/18
+        b: 0/27
+0.222222
+ctx - after kstest) 
+        a: 11/18
+        b: 27/27
+0.388889
+ref - before reset) 
+        a: 6/11
+        b: 0/22
+0.545455
+ref - after reset) 
+        a: 0/11
+        b: 0/22
+0
+ref - after kstest) 
+        a: 11/18
+        b: 27/27
+0.388889
+i_cdf: 4
+ctx - before resize) 
+        a: 11/18
+        b: 27/27
+0.173913
+ctx - after resize, before kstest) 
+        a: 4/23
+        b: 0/33
+0.173913
+ctx - after kstest) 
+        a: 11/23
+        b: 27/33
+0.339921
+ref - before reset) 
+        a: 11/18
+        b: 27/27
+0.388889
+ref - after reset) 
+        a: 0/18
+        b: 0/27
+0
+ref - after kstest) 
+        a: 11/23
+        b: 27/33
+0.339921
+i_cdf: 3
+ctx - before resize) 
+        a: 11/23
+        b: 27/33
+0.230769
+ctx - after resize, before kstest) 
+        a: 6/26
+        b: 0/36
+0.230769
+ctx - after kstest) 
+        a: 11/26
+        b: 27/36
+0.326923
+ref - before reset) 
+        a: 11/23
+        b: 27/33
+0.339921
+ref - after reset) 
+        a: 0/23
+        b: 0/33
+0
+ref - after kstest) 
+        a: 11/26
+        b: 27/36
+0.326923
+i_cdf: 2
+ctx - before resize) 
+        a: 11/26
+        b: 27/36
+0.222222
+ctx - after resize, before kstest) 
+        a: 6/27
+        b: 0/48
+0.222222
+ctx - after kstest) 
+        a: 23/27
+        b: 27/48
+0.289352
+ref - before reset) 
+        a: 11/26
+        b: 27/36
+0.326923
+ref - after reset) 
+        a: 0/26
+        b: 0/36
+0
+ref - after kstest) 
+        a: 23/27
+        b: 27/48
+0.289352
+i_cdf: 1
+ctx - before resize) 
+        a: 23/27
+        b: 27/48
+0.166667
+ctx - after resize, before kstest) 
+        a: 6/36
+        b: 0/50
+0.166667
+ctx - after kstest) 
+        a: 6/36
+        b: 0/50
+0.166667
+ref - before reset) 
+        a: 23/27
+        b: 27/48
+0.289352
+ref - after reset) 
+        a: 0/27
+        b: 0/48
+0
+ref - after kstest) 
+        a: 11/36
+        b: 27/50
+0.234444

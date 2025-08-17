@@ -41,6 +41,7 @@ tests: \
 		test_rododendrs.o \
 		test_cdf.o
 	./venv/bin/python3 ./tests/test_cdf.py
+	./test_rododendrs.o
 
 test_rododendrs.o: tests/test_rododendrs.cpp
 	g++ -Wall -Wextra -Werror -Wpedantic \

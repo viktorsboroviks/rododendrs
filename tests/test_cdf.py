@@ -34,6 +34,7 @@ def test_cdf(run_i: int):
     assert is_close
 
 
+print("running cdf tests...")
 for i in range(100):
     test_cdf(i)
 

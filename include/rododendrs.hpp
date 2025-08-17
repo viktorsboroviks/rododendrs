@@ -543,7 +543,7 @@ struct CDF {
 
     std::string to_csv(size_t len = 0) const
     {
-        assert(len < sorted_values.size());
+        assert(len <= sorted_values.size());
         std::stringstream ss{};
         ss << "i,v" << std::endl;
         if (len == 0) {
@@ -561,6 +561,47 @@ struct CDF {
         f.open(path);
         f << to_csv(len);
         f.close();
+    }
+
+    void from_csv(const std::string& path)
+    {
+        assert(empty());
+
+        std::ifstream f;
+        f.open(path);
+        assert(f.is_open());
+
+        std::string line;
+        std::getline(f, line);  // skip header
+
+        size_t ref_i = 0;
+        while (std::getline(f, line)) {
+            std::stringstream ss(line);
+            std::string i_str;
+            std::string v_str;
+
+            std::getline(ss, i_str, ',');
+            assert(!i_str.empty());
+
+            std::getline(ss, v_str);
+            assert(!v_str.empty());
+
+            double v = std::stod(v_str);
+            insert(v);
+
+            size_t i = std::stoul(i_str);
+            assert(i == ref_i);
+            ref_i++;
+        }
+        assert(size() == ref_i);
+        f.close();
+    }
+
+    CDF() = default;
+
+    explicit CDF(const std::string& path)
+    {
+        from_csv(path);
     }
 };
 
