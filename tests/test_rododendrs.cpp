@@ -575,8 +575,8 @@ exit_loop:
         assert(kctx.a_next.i_max_pdiff == kctx_reset.a_next.i_max_pdiff);
         assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
 
-        assert(cdf_len_a == cdf_len_b);
-        kctx.resize(cdf_len_a);
+        kctx.resize(cdf_len_a, cdf_len_b);
+        assert(kctx.do_saves == true);
         const double kstest1 = rododendrs::kstest(kctx, cdf_len_a, cdf_len_b);
         assert(kctx.a_next.i == kctx.a_next.i_end);
         assert(kctx.b_next.i == kctx.b_next.i_end);
@@ -588,7 +588,7 @@ exit_loop:
 #endif
 
         kctx_reset.reset();
-
+        assert(kctx_reset.do_saves == false);
         const double kstest2 =
                 rododendrs::kstest(kctx_reset, cdf_len_a, cdf_len_b);
         assert(kctx.a_next.i_begin == kctx_reset.a_next.i_begin);

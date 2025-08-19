@@ -956,6 +956,7 @@ struct KstestCtx {
     CdfCtx b_saved;
 
     double max_pdiff = 0;
+    bool do_saves    = false;
 
     void save()
     {
@@ -987,7 +988,7 @@ struct KstestCtx {
 
         const double pdiff = std::abs(pa - pb);
         if (pdiff > max_pdiff) {
-            if (!a_next.is_end() && !b_next.is_end()) {
+            if (!a_next.is_end() && !b_next.is_end() && do_saves) {
                 save();
             }
 
@@ -1005,21 +1006,35 @@ struct KstestCtx {
         a_next.reset();
         b_next.reset();
         max_pdiff = 0;
+        do_saves  = false;
         save();
     }
 
-    void resize(size_t new_len)
+    void resize(size_t a_end, size_t b_end)
     {
-        if (new_len < a_next.i_end || new_len < b_next.i_end) {
+        assert(a_end > 0);
+        assert(b_end > 0);
+        // if a and b are increased in size in non-linear manner,
+        // we cannot guarantee that previous max_pdiff before resize would hold
+        // -> saving becomes useless
+        const double a_rel =
+                static_cast<double>(a_end) / static_cast<double>(a_next.i_end);
+        const double b_rel =
+                static_cast<double>(b_end) / static_cast<double>(b_next.i_end);
+        if (a_rel < 1.0 || a_rel != b_rel) {
             reset();
-            a_next.i_end = new_len;
-            b_next.i_end = new_len;
+            a_next.i_end = a_end;
+            b_next.i_end = b_end;
+            do_saves     = false;
             return;
+        }
+        else {
+            do_saves = true;
         }
 
         restore();
-        a_next.i_end = new_len;
-        b_next.i_end = new_len;
+        a_next.i_end = a_end;
+        b_next.i_end = b_end;
 
         // recalculate max_pdiff
         const double pa = a_next.p(a_next.i_max_pdiff);
