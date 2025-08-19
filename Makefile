@@ -70,6 +70,7 @@ sampling_f.csv: sampling_f.o
 
 tests: \
 		output \
+		venv \
 		./tests/test_cdf.py \
 		test_cdf.o \
 		test_rododendrs.o

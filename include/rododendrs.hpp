@@ -842,28 +842,17 @@ struct CdfCtx {
 
     void reset()
     {
-<<<<<<< HEAD
-        i      = i_begin;
-        i_vnew = i_begin;
-=======
         i           = i_begin;
         i_vnew      = i_begin;
         i_max_pdiff = i_begin;
->>>>>>> continuous_cdf
     }
 
-    void resize(size_t begin = 0, size_t end = 0)
+    void init(size_t begin = 0, size_t end = 0)
     {
-<<<<<<< HEAD
-        i_begin = begin;
-        i       = i_begin;
-        i_vnew  = i_begin;
-=======
         i_begin     = begin;
         i           = i_begin;
         i_vnew      = i_begin;
         i_max_pdiff = i_begin;
->>>>>>> continuous_cdf
         if (end == 0) {
             i_end = cdf.size();
         }
@@ -876,7 +865,7 @@ struct CdfCtx {
     explicit CdfCtx(const CDF& cdf, size_t begin = 0, size_t end = 0) :
         cdf(cdf)
     {
-        resize(begin, end);
+        init(begin, end);
     }
 
     CdfCtx& operator=(const CdfCtx& other)
@@ -963,12 +952,9 @@ struct CdfCtx {
 struct KstestCtx {
     CdfCtx a_next;
     CdfCtx b_next;
-<<<<<<< HEAD
-=======
     CdfCtx a_saved;
     CdfCtx b_saved;
 
->>>>>>> continuous_cdf
     double max_pdiff = 0;
     bool do_saves    = false;
 
@@ -990,21 +976,9 @@ struct KstestCtx {
         a_saved(cdf_a),
         b_saved(cdf_b)
     {
-<<<<<<< HEAD
-        a_next.resize();
-        b_next.resize();
-    }
-
-    void reset()
-    {
-        a_next.reset();
-        b_next.reset();
-        max_pdiff = 0;
-=======
         a_next.init();
         b_next.init();
         save();
->>>>>>> continuous_cdf
     }
 
     double update_max_pdiff()
