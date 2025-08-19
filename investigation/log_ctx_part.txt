@@ -1,0 +1,287 @@
+^^^^^^^^^^^^
+i_cdf: 6
+cdf_len_a: 16
+cdf_len_b: 32
+^^^^^^^^^^^^
+restore
+restore
+kstest - i: 0
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               10     13      10      13
+i_vnew:          10     13      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.625  0.406   0.909     0.5
+
+kstest - update b
+kstest - i: 1
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               10     14      10      13
+i_vnew:          10     14      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.625  0.438   0.909     0.5
+
+kstest - update b
+kstest - i: 2
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               10     18      10      13
+i_vnew:          10     18      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.625  0.562   0.909     0.5
+
+kstest - update b
+kstest - i: 3
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               10     20      10      13
+i_vnew:          10     20      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.625  0.625   0.909     0.5
+
+kstest - update a
+kstest - i: 4
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               11     20      10      13
+i_vnew:          11     20      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.688  0.625   0.909     0.5
+
+kstest - update b
+kstest - i: 5
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               11     25      10      13
+i_vnew:          11     25      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.688  0.781   0.909     0.5
+
+kstest - update b
+kstest - i: 6
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               11     26      10      13
+i_vnew:          11     26      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.688  0.812   0.909     0.5
+
+kstest - update b
+kstest - i: 7
+max_pdiff: 0.219
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      11      26
+is_end:           0      0       0       0
+i:               11     31      10      13
+i_vnew:          11     31      10      13
+i_max_pdiff:      8      9       8       9
+p_step:      0.0625 0.0312  0.0909  0.0385
+p:            0.688  0.969   0.909     0.5
+
+update max_pdiff
+save
+kstest - update a
+kstest - i: 8
+max_pdiff: 0.281
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      16      32
+is_end:           0      0       0       0
+i:               14     31      11      31
+i_vnew:          14     31      11      31
+i_max_pdiff:     11     31       8       9
+p_step:      0.0625 0.0312  0.0625  0.0312
+p:            0.875  0.969   0.688   0.969
+
+kstest - update b
+kstest - i: 9
+max_pdiff: 0.281
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      16      32
+is_end:           0      1       0       0
+i:               14     32      11      31
+i_vnew:          14     31      11      31
+i_max_pdiff:     11     31       8       9
+p_step:      0.0625 0.0312  0.0625  0.0312
+p:            0.875      1   0.688   0.969
+
+kstest - update a
+kstest - i: 10
+max_pdiff: 0.281
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      16      32
+is_end:           1      1       0       0
+i:               16     32      11      31
+i_vnew:          14     31      11      31
+i_max_pdiff:     11     31       8       9
+p_step:      0.0625 0.0312  0.0625  0.0312
+p:                1      1   0.688   0.969
+
+kstest - break
+kstest - return
+max_pdiff: 0.281
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             16     32      16      32
+is_end:           1      1       0       0
+i:               16     32      11      31
+i_vnew:          14     31      11      31
+i_max_pdiff:     11     31       8       9
+p_step:      0.0625 0.0312  0.0625  0.0312
+p:                1      1   0.688   0.969
+
+^^^^^^^^^^^^
+i_cdf: 5
+cdf_len_a: 18
+cdf_len_b: 38
+^^^^^^^^^^^^
+restore
+restore
+kstest - i: 0
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           0      0       0       0
+i:               11     31      11      31
+i_vnew:          11     31      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:            0.611  0.816   0.688   0.969
+
+kstest - update a
+kstest - i: 1
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           0      0       0       0
+i:               14     31      11      31
+i_vnew:          14     31      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:            0.778  0.816   0.688   0.969
+
+kstest - update b
+kstest - i: 2
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           0      0       0       0
+i:               14     32      11      31
+i_vnew:          14     32      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:            0.778  0.842   0.688   0.969
+
+kstest - update a
+kstest - i: 3
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           0      0       0       0
+i:               16     32      11      31
+i_vnew:          16     32      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:            0.889  0.842   0.688   0.969
+
+kstest - update a
+kstest - i: 4
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           0      0       0       0
+i:               17     32      11      31
+i_vnew:          17     32      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:            0.944  0.842   0.688   0.969
+
+kstest - update a
+kstest - i: 5
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           1      0       0       0
+i:               18     32      11      31
+i_vnew:          17     32      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:                1  0.842   0.688   0.969
+
+kstest - update b
+kstest - i: 6
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           1      0       0       0
+i:               18     33      11      31
+i_vnew:          17     33      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:                1  0.868   0.688   0.969
+
+kstest - update b
+kstest - i: 7
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           1      1       0       0
+i:               18     38      11      31
+i_vnew:          17     33      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:                1      1   0.688   0.969
+
+kstest - break
+kstest - return
+max_pdiff: 0.208
+             a_next b_next a_saved b_saved
+begin:            0      0       0       0
+end:             18     38      16      32
+is_end:           1      1       0       0
+i:               18     38      11      31
+i_vnew:          17     33      11      31
+i_max_pdiff:      8      9       8       9
+p_step:      0.0556 0.0263  0.0625  0.0312
+p:                1      1   0.688   0.969
+

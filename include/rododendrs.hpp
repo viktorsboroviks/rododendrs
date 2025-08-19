@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <deque>
+#include <fstream>
 #include <limits>
 #include <random>
 #include <set>
@@ -539,6 +540,69 @@ struct CDF {
         }
         return ss.str();
     }
+
+    std::string to_csv(size_t len = 0) const
+    {
+        assert(len <= sorted_values.size());
+        std::stringstream ss{};
+        ss << "i,v" << std::endl;
+        if (len == 0) {
+            len = sorted_values.size();
+        }
+        for (size_t i = 0; i < len; i++) {
+            ss << i << "," << sorted_values[i] << std::endl;
+        }
+        return ss.str();
+    }
+
+    void to_csv(const std::string& path, size_t len = 0) const
+    {
+        std::ofstream f;
+        f.open(path);
+        f << to_csv(len);
+        f.close();
+    }
+
+    void from_csv(const std::string& path)
+    {
+        assert(empty());
+
+        std::ifstream f;
+        f.open(path);
+        assert(f.is_open());
+
+        std::string line;
+        std::getline(f, line);  // skip header
+
+        size_t ref_i = 0;
+        while (std::getline(f, line)) {
+            std::stringstream ss(line);
+            std::string i_str;
+            std::string v_str;
+
+            std::getline(ss, i_str, ',');
+            assert(!i_str.empty());
+
+            std::getline(ss, v_str);
+            assert(!v_str.empty());
+
+            double v = std::stod(v_str);
+            insert(v);
+
+            size_t i = std::stoul(i_str);
+            assert(i == ref_i);
+            ref_i++;
+        }
+        assert(size() == ref_i);
+        f.close();
+    }
+
+    CDF() = default;
+
+    explicit CDF(const std::string& path)
+    {
+        from_csv(path);
+    }
 };
 
 template <typename T>
@@ -770,22 +834,36 @@ public:
 
 struct CdfCtx {
     const CDF& cdf;
-    size_t i_begin = 0;
-    size_t i_end   = 0;
-    size_t i       = 0;
-    size_t i_vnew  = 0;
+    size_t i_begin     = 0;
+    size_t i_end       = 0;
+    size_t i           = 0;
+    size_t i_vnew      = 0;
+    size_t i_max_pdiff = 0;
 
     void reset()
     {
+<<<<<<< HEAD
         i      = i_begin;
         i_vnew = i_begin;
+=======
+        i           = i_begin;
+        i_vnew      = i_begin;
+        i_max_pdiff = i_begin;
+>>>>>>> continuous_cdf
     }
 
     void resize(size_t begin = 0, size_t end = 0)
     {
+<<<<<<< HEAD
         i_begin = begin;
         i       = i_begin;
         i_vnew  = i_begin;
+=======
+        i_begin     = begin;
+        i           = i_begin;
+        i_vnew      = i_begin;
+        i_max_pdiff = i_begin;
+>>>>>>> continuous_cdf
         if (end == 0) {
             i_end = cdf.size();
         }
@@ -799,6 +877,16 @@ struct CdfCtx {
         cdf(cdf)
     {
         resize(begin, end);
+    }
+
+    CdfCtx& operator=(const CdfCtx& other)
+    {
+        i_begin     = other.i_begin;
+        i_end       = other.i_end;
+        i           = other.i;
+        i_vnew      = other.i_vnew;
+        i_max_pdiff = other.i_max_pdiff;
+        return *this;
     }
 
     void next()
@@ -840,25 +928,33 @@ struct CdfCtx {
         return _p_step;
     }
 
-    double p() const
+    double p(size_t idx) const
     {
-        const double _p = static_cast<double>(i) * p_step();
+        assert(idx >= i_begin);
+        assert(idx <= i_end);
+        const double _p = static_cast<double>(idx) * p_step();
         assert(_p >= 0.0);
         assert(_p <= 1.0);
         return _p;
+    }
+
+    double p() const
+    {
+        return p(i);
     }
 
     std::string to_string() const
     {
         std::stringstream ss{};
         // clang-format off
-        ss << "  begin: "   << i_begin   << std::endl;
-        ss << "  end: "     << i_end     << std::endl;
-        ss << "  is_end: "  << is_end()  << std::endl;
-        ss << "  i: "       << i         << std::endl;
-        ss << "  i_vnew: "  << i_vnew    << std::endl;
-        ss << "  p_step: "  << p_step()  << std::endl;
-        ss << "  p: "       << p()       << std::endl;
+        ss << "  begin: "       << i_begin      << std::endl;
+        ss << "  end: "         << i_end        << std::endl;
+        ss << "  is_end: "      << is_end()     << std::endl;
+        ss << "  i: "           << i            << std::endl;
+        ss << "  i_vnew: "      << i_vnew       << std::endl;
+        ss << "  i_max_pdiff: " << i_max_pdiff  << std::endl;
+        ss << "  p_step: "      << p_step()     << std::endl;
+        ss << "  p: "           << p()          << std::endl;
         // clang-format on
         return ss.str();
     }
@@ -867,12 +963,34 @@ struct CdfCtx {
 struct KstestCtx {
     CdfCtx a_next;
     CdfCtx b_next;
+<<<<<<< HEAD
+=======
+    CdfCtx a_saved;
+    CdfCtx b_saved;
+
+>>>>>>> continuous_cdf
     double max_pdiff = 0;
+    bool do_saves    = false;
+
+    void save()
+    {
+        a_saved = a_next;
+        b_saved = b_next;
+    }
+
+    void restore()
+    {
+        a_next = a_saved;
+        b_next = b_saved;
+    }
 
     KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
         a_next(cdf_a),
-        b_next(cdf_b)
+        b_next(cdf_b),
+        a_saved(cdf_a),
+        b_saved(cdf_b)
     {
+<<<<<<< HEAD
         a_next.resize();
         b_next.resize();
     }
@@ -882,6 +1000,11 @@ struct KstestCtx {
         a_next.reset();
         b_next.reset();
         max_pdiff = 0;
+=======
+        a_next.init();
+        b_next.init();
+        save();
+>>>>>>> continuous_cdf
     }
 
     double update_max_pdiff()
@@ -889,32 +1012,90 @@ struct KstestCtx {
         const double pa = a_next.p();
         const double pb = b_next.p();
 
-        max_pdiff = std::max(max_pdiff, std::abs(pa - pb));
+        const double pdiff = std::abs(pa - pb);
+        if (pdiff > max_pdiff) {
+            if (!a_next.is_end() && !b_next.is_end() && do_saves) {
+                save();
+            }
+
+            a_next.i_max_pdiff = a_next.i;
+            b_next.i_max_pdiff = b_next.i;
+            max_pdiff          = pdiff;
+        }
         assert(max_pdiff >= 0.0);
         assert(max_pdiff <= 1.0);
         return max_pdiff;
+    }
+
+    void reset()
+    {
+        a_next.reset();
+        b_next.reset();
+        max_pdiff = 0;
+        do_saves  = false;
+        save();
+    }
+
+    void resize(size_t a_end, size_t b_end)
+    {
+        assert(a_end > 0);
+        assert(b_end > 0);
+        // if a and b are increased in size in non-linear manner,
+        // we cannot guarantee that previous max_pdiff before resize would hold
+        // -> saving becomes useless
+        const double a_rel =
+                static_cast<double>(a_end) / static_cast<double>(a_next.i_end);
+        const double b_rel =
+                static_cast<double>(b_end) / static_cast<double>(b_next.i_end);
+        if (a_rel < 1.0 || a_rel != b_rel) {
+            reset();
+            a_next.i_end = a_end;
+            b_next.i_end = b_end;
+            do_saves     = false;
+            return;
+        }
+        else {
+            do_saves = true;
+        }
+
+        restore();
+        a_next.i_end = a_end;
+        b_next.i_end = b_end;
+
+        // recalculate max_pdiff
+        const double pa = a_next.p(a_next.i_max_pdiff);
+        const double pb = b_next.p(b_next.i_max_pdiff);
+        max_pdiff       = std::abs(pa - pb);
     }
 
     std::string to_string() const
     {
         std::stringstream ss{};
         // clang-format off
-        ss << "max_pdiff: "     << max_pdiff        << std::endl;
-        ss << "a"                                   << std::endl;
-        ss << a_next.to_string();
-        ss << "b"                                   << std::endl;
-        ss << b_next.to_string();
+        ss.precision(3);
+        ss << "max_pdiff: " << max_pdiff        << std::endl;
+        ss << "             a_next b_next a_saved b_saved" << std::endl;
+        ss << "begin:       " << std::setw(6) << a_next.i_begin     << " " << std::setw(6) << b_next.i_begin     << " " << std::setw(7) << a_saved.i_begin     << " " << std::setw(7) << b_saved.i_begin     << std::endl;
+        ss << "end:         " << std::setw(6) << a_next.i_end       << " " << std::setw(6) << b_next.i_end       << " " << std::setw(7) << a_saved.i_end       << " " << std::setw(7) << b_saved.i_end       << std::endl;
+        ss << "is_end:      " << std::setw(6) << a_next.is_end()    << " " << std::setw(6) << b_next.is_end()    << " " << std::setw(7) << a_saved.is_end()    << " " << std::setw(7) << b_saved.is_end()    << std::endl;
+        ss << "i:           " << std::setw(6) << a_next.i           << " " << std::setw(6) << b_next.i           << " " << std::setw(7) << a_saved.i           << " " << std::setw(7) << b_saved.i           << std::endl;
+        ss << "i_vnew:      " << std::setw(6) << a_next.i_vnew      << " " << std::setw(6) << b_next.i_vnew      << " " << std::setw(7) << a_saved.i_vnew      << " " << std::setw(7) << b_saved.i_vnew      << std::endl;
+        ss << "i_max_pdiff: " << std::setw(6) << a_next.i_max_pdiff << " " << std::setw(6) << b_next.i_max_pdiff << " " << std::setw(7) << a_saved.i_max_pdiff << " " << std::setw(7) << b_saved.i_max_pdiff << std::endl;
+        ss << "p_step:      " << std::setw(6) << a_next.p_step()    << " " << std::setw(6) << b_next.p_step()    << " " << std::setw(7) << a_saved.p_step()    << " " << std::setw(7) << b_saved.p_step()    << std::endl;
+        ss << "p:           " << std::setw(6) << a_next.p()         << " " << std::setw(6) << b_next.p()         << " " << std::setw(7) << a_saved.p()         << " " << std::setw(7) << b_saved.p()         << std::endl;
         // clang-format on
         return ss.str();
     }
 };
 
 // calculate kstest until end_i
-double kstest(KstestCtx& ctx)
+double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 {
-    assert(ctx.a_next.is_begin());
-    assert(ctx.b_next.is_begin());
-    ctx.max_pdiff = 0;
+    assert(ctx.a_next.i_end <= len_a);
+    assert(ctx.b_next.i_end <= len_b);
+
+    ctx.a_next.i_end = len_a;
+    ctx.b_next.i_end = len_b;
 
     while (true) {
         // update max p diff
@@ -974,9 +1155,17 @@ double kstest(KstestCtx& ctx)
         }
     }
 
+    assert(ctx.a_next.is_end());
+    assert(ctx.b_next.is_end());
     assert(rododendrs::approx_equal<double>(ctx.a_next.p(), 1.0));
     assert(rododendrs::approx_equal<double>(ctx.b_next.p(), 1.0));
+
     return ctx.max_pdiff;
+}
+
+double kstest(KstestCtx& ctx)
+{
+    return kstest(ctx, ctx.a_next.i_end, ctx.b_next.i_end);
 }
 
 // calculate kstest over whole range

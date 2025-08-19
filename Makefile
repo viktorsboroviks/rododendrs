@@ -1,6 +1,35 @@
+UNAME_S := $(shell uname -s)
+# on macos use clang++
+
+ifeq ($(UNAME_S),Darwin)
+CPP := clang++
+# on linux use g++
+else
+CPP := g++
+endif
+
+#SANITIZE := yes
+ifeq ($(SANITIZE),yes)
+SANITIZE_FLAGS := -fsanitize=address,undefined -fno-omit-frame-pointer
+ifeq ($(UNAME_S),Darwin)
+# add nothing
+else
+SANITIZE_FLAGS += -fsanitize=leak
+endif
+endif
+
+#DEBUG := yes
+ifeq ($(DEBUG),yes)
+DEBUG_FLAGS := -g
+OPTIMIZE_FLAGS := -O0
+else
+OPTIMIZE_FLAGS := -O3
+endif
+
 .PHONY: \
 	all \
 	benchmarks \
+	tests \
 	format \
 	format-cpp \
 	lint \
@@ -10,8 +39,13 @@
 
 all: benchmarks tests
 
+output:
+	mkdir -p output
+	rm -rf output/*
+
+PYTHON_VERSION := python3.12
 venv: requirements.txt
-	python3 -m venv venv
+	$(PYTHON_VERSION) -m venv venv
 	./venv/bin/pip3 install --no-cache-dir --requirement requirements.txt
 
 vasarniica:
@@ -34,7 +68,13 @@ sampling_f.o: \
 sampling_f.csv: sampling_f.o
 	./sampling_f.o > $@
 
-tests: test_rododendrs.o
+tests: \
+		output \
+		./tests/test_cdf.py \
+		test_cdf.o \
+		test_rododendrs.o
+	./venv/bin/python3 ./tests/test_cdf.py
+	./test_rododendrs.o
 
 test_rododendrs.o: tests/test_rododendrs.cpp
 	g++ -Wall -Wextra -Werror -Wpedantic \
@@ -42,11 +82,28 @@ test_rododendrs.o: tests/test_rododendrs.cpp
 		-I./include \
 		tests/test_rododendrs.cpp -o $@
 
+test_cdf.o: tests/test_cdf.cpp
+	g++ -Wall -Wextra -Werror -Wpedantic \
+		-std=c++20 -O3 \
+		-I./include \
+		tests/test_cdf.cpp -o $@
+
+test_kstest.o: tests/test_kstest.cpp
+	g++ -Wall -Wextra -Werror -Wpedantic \
+		-std=c++20 \
+		$(SANITIZE_FLAGS) \
+		$(OPTIMIZE_FLAGS) \
+		$(DEBUG_FLAGS) \
+		-I./include \
+		tests/test_kstest.cpp -o $@
+
 format: format-cpp
 
 format-cpp: \
 		include/rododendrs.hpp \
 		benchmarks/sampling_f/sampling_f.cpp \
+		tests/test_cdf.cpp \
+		tests/test_kstest.cpp \
 		tests/test_rododendrs.cpp
 	clang-format -i $^
 
@@ -55,6 +112,8 @@ lint: lint-cpp
 lint-cpp: \
 		include/rododendrs.hpp \
 		benchmarks/sampling_f/sampling_f.cpp \
+		tests/test_cdf.cpp \
+		tests/test_kstest.cpp \
 		tests/test_rododendrs.cpp
 	cppcheck \
 		--enable=warning,portability,performance \
@@ -71,9 +130,9 @@ lint-cpp: \
 		$^
 
 clean:
+	rm -rf output
 	rm -rf *.o
 	rm -rf *.csv
-	rm -rf *.html
 
 distclean: clean
 	rm -rf venv

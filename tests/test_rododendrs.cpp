@@ -517,9 +517,7 @@ void test_kstest_nested_cdf()
         }
 
         // b
-        const size_t len_b =
-                rododendrs::rnd_in_range<size_t>(len_min, len_max);
-        for (size_t i = 0; i < len_b; i++) {
+        while (true) {
             double v;
             do {
                 v = rododendrs::rnd_in_range<double>(
@@ -533,46 +531,109 @@ void test_kstest_nested_cdf()
                 for (size_t i_cdf = 0; i_cdf < (n_nested - i_nest); i_cdf++) {
                     cdfs_b[i_cdf].insert(v);
                 }
+                if (supercdf_a.size() == supercdf_b.size()) {
+                    goto exit_loop;
+                }
             }
         }
     }
 
+exit_loop:
+
     // kstest check
     rododendrs::KstestCtx kctx(supercdf_a, supercdf_b);
-    size_t prev_cdf_size_a = 0;
-    size_t prev_cdf_size_b = 0;
-    for (size_t i_cdf = n_nested - 1; i_cdf > 0; i_cdf--) {
-        assert(cdfs_a[i_cdf].size() >= prev_cdf_size_a);
-        assert(cdfs_b[i_cdf].size() >= prev_cdf_size_b);
+    rododendrs::KstestCtx kctx_reset(supercdf_a, supercdf_b);
+    size_t prev_cdf_len_a = 0;
+    size_t prev_cdf_len_b = 0;
+    assert(cdfs_a.size() == n_nested);
+    assert(cdfs_b.size() == n_nested);
+    for (size_t ni_cdf = 0; ni_cdf < n_nested; ni_cdf++) {
+        const size_t i_cdf     = n_nested - 1 - ni_cdf;
+        const size_t cdf_len_a = cdfs_a[i_cdf].size();
+        const size_t cdf_len_b = cdfs_b[i_cdf].size();
+        assert(cdf_len_a == cdf_len_b);
+        assert(cdf_len_a >= prev_cdf_len_a);
+        assert(cdf_len_b >= prev_cdf_len_b);
         assert(!cdfs_a[i_cdf].empty());
         assert(!cdfs_b[i_cdf].empty());
-        prev_cdf_size_a = cdfs_a[i_cdf].size();
-        prev_cdf_size_b = cdfs_b[i_cdf].size();
+        prev_cdf_len_a = cdf_len_a;
+        prev_cdf_len_b = cdf_len_b;
 
-        for (size_t i = 0; i < cdfs_a[i_cdf].size(); i++) {
+        for (size_t i = 0; i < cdf_len_a; i++) {
             assert(cdfs_a[i_cdf].sorted_values[i] ==
                    supercdf_a.sorted_values[i]);
         }
-        for (size_t i = 0; i < cdfs_b[i_cdf].size(); i++) {
+        for (size_t i = 0; i < cdf_len_b; i++) {
             assert(cdfs_b[i_cdf].sorted_values[i] ==
                    supercdf_b.sorted_values[i]);
         }
 
-        kctx.a_next.resize(0, cdfs_a[i_cdf].size());
-        kctx.b_next.resize(0, cdfs_b[i_cdf].size());
-        const double kstest1 = rododendrs::kstest(kctx);
+        assert(kctx.a_next.i == kctx_reset.a_next.i);
+        assert(kctx.b_next.i == kctx_reset.b_next.i);
+        assert(kctx.a_next.i_vnew == kctx_reset.a_next.i_vnew);
+        assert(kctx.b_next.i_vnew == kctx_reset.b_next.i_vnew);
+        assert(kctx.a_next.i_max_pdiff == kctx_reset.a_next.i_max_pdiff);
+        assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
+
+        kctx.resize(cdf_len_a, cdf_len_b);
+        assert(kctx.do_saves == true);
+        const double kstest1 = rododendrs::kstest(kctx, cdf_len_a, cdf_len_b);
+        assert(kctx.a_next.i == kctx.a_next.i_end);
+        assert(kctx.b_next.i == kctx.b_next.i_end);
         assert(kctx.max_pdiff == kstest1);
 
+#if 0
+        kctx.a_next.cdf.to_csv("a_next.csv", cdf_len_a);
+        kctx.b_next.cdf.to_csv("b_next.csv", cdf_len_b);
+#endif
+
+        kctx_reset.reset();
+        assert(kctx_reset.do_saves == false);
         const double kstest2 =
+                rododendrs::kstest(kctx_reset, cdf_len_a, cdf_len_b);
+        assert(kctx.a_next.i_begin == kctx_reset.a_next.i_begin);
+        assert(kctx.a_next.i_end == kctx_reset.a_next.i_end);
+        assert(kctx.b_next.i_begin == kctx_reset.b_next.i_begin);
+        assert(kctx.b_next.i_end == kctx_reset.b_next.i_end);
+        assert(kctx_reset.a_next.i == kctx_reset.a_next.i_end);
+        assert(kctx_reset.b_next.i == kctx_reset.b_next.i_end);
+        assert(kctx_reset.max_pdiff == kstest2);
+
+        assert(kctx.a_next.i == kctx_reset.a_next.i);
+        assert(kctx.b_next.i == kctx_reset.b_next.i);
+        assert(kctx.a_next.i_vnew == kctx_reset.a_next.i_vnew);
+        assert(kctx.b_next.i_vnew == kctx_reset.b_next.i_vnew);
+#if 0
+        if (kctx.a_next.i_max_pdiff != kctx_reset.a_next.i_max_pdiff) {
+            supercdf_a.to_csv("supercdf_a.csv");
+            supercdf_b.to_csv("supercdf_b.csv");
+            for (size_t i = 0; i < n_nested; i++) {
+                std::stringstream ss{};
+                ss << "cdf_a" << i << ".csv";
+                cdfs_a[i].to_csv(ss.str());
+                ss.str("");
+                ss << "cdf_b" << i << ".csv";
+                cdfs_b[i].to_csv(ss.str());
+            }
+        }
+#endif
+
+        assert(kctx.a_next.i_max_pdiff == kctx_reset.a_next.i_max_pdiff);
+        assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
+
+        const double kstest3 =
                 rododendrs::kstest(cdfs_a[i_cdf], cdfs_b[i_cdf]);
 
         assert(rododendrs::approx_equal<double>(kstest1, kstest2));
+        assert(rododendrs::approx_equal<double>(kstest2, kstest3));
     }
 }
 
 int main()
 {
     const size_t test_n = 100;
+
+    std::cout << "running rododendrs tests..." << std::endl;
 
     for (size_t test_i = 0; test_i < test_n; test_i++) {
         test_cdf();
