@@ -1,6 +1,5 @@
 cppcheck_report.txt
 **.o
-**.csv
-**.html
+output
 venv
 vasarniica

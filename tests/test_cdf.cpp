@@ -53,8 +53,8 @@ int main()
         }
     }
 
-    cdf_a.to_csv("cdf_a.csv");
-    cdf_b.to_csv("cdf_b.csv");
+    cdf_a.to_csv("output/cdf_a.csv");
+    cdf_b.to_csv("output/cdf_b.csv");
     rododendrs::KstestCtx kctx(cdf_a, cdf_b);
     const double kstest = rododendrs::kstest(kctx);
 

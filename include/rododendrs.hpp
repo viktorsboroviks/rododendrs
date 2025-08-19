@@ -990,6 +990,7 @@ struct KstestCtx {
             if (!a_next.is_end() && !b_next.is_end()) {
                 save();
             }
+
             a_next.i_max_pdiff = a_next.i;
             b_next.i_max_pdiff = b_next.i;
             max_pdiff          = pdiff;
@@ -1007,18 +1008,18 @@ struct KstestCtx {
         save();
     }
 
-    void resize(size_t a_end, size_t b_end)
+    void resize(size_t new_len)
     {
-        if (a_end < a_next.i_end || b_end < b_next.i_end) {
+        if (new_len < a_next.i_end || new_len < b_next.i_end) {
             reset();
-            a_next.i_end = a_end;
-            b_next.i_end = b_end;
+            a_next.i_end = new_len;
+            b_next.i_end = new_len;
             return;
         }
 
         restore();
-        a_next.i_end = a_end;
-        b_next.i_end = b_end;
+        a_next.i_end = new_len;
+        b_next.i_end = new_len;
 
         // recalculate max_pdiff
         const double pa = a_next.p(a_next.i_max_pdiff);
@@ -1030,11 +1031,17 @@ struct KstestCtx {
     {
         std::stringstream ss{};
         // clang-format off
-        ss << "max_pdiff: "     << max_pdiff        << std::endl;
-        ss << "a"                                   << std::endl;
-        ss << a_next.to_string();
-        ss << "b"                                   << std::endl;
-        ss << b_next.to_string();
+        ss.precision(3);
+        ss << "max_pdiff: " << max_pdiff        << std::endl;
+        ss << "             a_next b_next a_saved b_saved" << std::endl;
+        ss << "begin:       " << std::setw(6) << a_next.i_begin     << " " << std::setw(6) << b_next.i_begin     << " " << std::setw(7) << a_saved.i_begin     << " " << std::setw(7) << b_saved.i_begin     << std::endl;
+        ss << "end:         " << std::setw(6) << a_next.i_end       << " " << std::setw(6) << b_next.i_end       << " " << std::setw(7) << a_saved.i_end       << " " << std::setw(7) << b_saved.i_end       << std::endl;
+        ss << "is_end:      " << std::setw(6) << a_next.is_end()    << " " << std::setw(6) << b_next.is_end()    << " " << std::setw(7) << a_saved.is_end()    << " " << std::setw(7) << b_saved.is_end()    << std::endl;
+        ss << "i:           " << std::setw(6) << a_next.i           << " " << std::setw(6) << b_next.i           << " " << std::setw(7) << a_saved.i           << " " << std::setw(7) << b_saved.i           << std::endl;
+        ss << "i_vnew:      " << std::setw(6) << a_next.i_vnew      << " " << std::setw(6) << b_next.i_vnew      << " " << std::setw(7) << a_saved.i_vnew      << " " << std::setw(7) << b_saved.i_vnew      << std::endl;
+        ss << "i_max_pdiff: " << std::setw(6) << a_next.i_max_pdiff << " " << std::setw(6) << b_next.i_max_pdiff << " " << std::setw(7) << a_saved.i_max_pdiff << " " << std::setw(7) << b_saved.i_max_pdiff << std::endl;
+        ss << "p_step:      " << std::setw(6) << a_next.p_step()    << " " << std::setw(6) << b_next.p_step()    << " " << std::setw(7) << a_saved.p_step()    << " " << std::setw(7) << b_saved.p_step()    << std::endl;
+        ss << "p:           " << std::setw(6) << a_next.p()         << " " << std::setw(6) << b_next.p()         << " " << std::setw(7) << a_saved.p()         << " " << std::setw(7) << b_saved.p()         << std::endl;
         // clang-format on
         return ss.str();
     }
@@ -1043,20 +1050,11 @@ struct KstestCtx {
 // calculate kstest until end_i
 double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
 {
-    ctx.resize(len_a, len_b);
-    assert(ctx.a_next.i_end == len_a);
-    assert(ctx.b_next.i_end == len_b);
+    assert(ctx.a_next.i_end <= len_a);
+    assert(ctx.b_next.i_end <= len_b);
 
-#if 0
-    std::cout << "in kstest - after resize) " << std::endl;
-    std::cout << "\ta: " << ctx.a_next.i_max_pdiff << "/" << ctx.a_next.i_end
-              << std::endl;
-    std::cout << "\tb: " << ctx.b_next.i_max_pdiff << "/" << ctx.b_next.i_end
-              << std::endl;
-    std::cout << ctx.max_pdiff << std::endl;
-    std::cout << "\tai: " << ctx.a_next.i << std::endl;
-    std::cout << "\tbi: " << ctx.b_next.i << std::endl;
-#endif
+    ctx.a_next.i_end = len_a;
+    ctx.b_next.i_end = len_b;
 
     while (true) {
         // update max p diff
@@ -1120,19 +1118,20 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
     assert(ctx.b_next.is_end());
     assert(rododendrs::approx_equal<double>(ctx.a_next.p(), 1.0));
     assert(rododendrs::approx_equal<double>(ctx.b_next.p(), 1.0));
+
     return ctx.max_pdiff;
 }
 
 double kstest(KstestCtx& ctx)
 {
-    return kstest(ctx, ctx.a_next.cdf.size(), ctx.b_next.cdf.size());
+    return kstest(ctx, ctx.a_next.i_end, ctx.b_next.i_end);
 }
 
 // calculate kstest over whole range
 double kstest(const CDF& cdf_a, const CDF& cdf_b)
 {
     KstestCtx ctx(cdf_a, cdf_b);
-    return kstest(ctx, cdf_a.size(), cdf_b.size());
+    return kstest(ctx);
 }
 
 }  // namespace rododendrs

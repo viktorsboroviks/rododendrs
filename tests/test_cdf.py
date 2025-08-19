@@ -13,8 +13,8 @@ def test_cdf(run_i: int):
     )
     result_float = float(result.stdout.strip())
 
-    pd_a = pd.read_csv("cdf_a.csv", index_col=0)
-    pd_b = pd.read_csv("cdf_b.csv", index_col=0)
+    pd_a = pd.read_csv("output/cdf_a.csv", index_col=0)
+    pd_b = pd.read_csv("output/cdf_b.csv", index_col=0)
     pd_common = pd.merge(pd_a, pd_b, on="i", suffixes=("a", "b"))
 
     # calculate cdfs
