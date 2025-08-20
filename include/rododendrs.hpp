@@ -574,7 +574,9 @@ struct CDF {
         std::string line;
         std::getline(f, line);  // skip header
 
+#ifndef NDEBUG
         size_t ref_i = 0;
+#endif
         while (std::getline(f, line)) {
             std::stringstream ss(line);
             std::string i_str;
@@ -589,9 +591,11 @@ struct CDF {
             double v = std::stod(v_str);
             insert(v);
 
+#ifndef NDEBUG
             size_t i = std::stoul(i_str);
             assert(i == ref_i);
             ref_i++;
+#endif
         }
         assert(size() == ref_i);
         f.close();
