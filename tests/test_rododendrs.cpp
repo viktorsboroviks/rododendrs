@@ -116,7 +116,7 @@ void test_cdfctx()
     assert(cdf_v_count == data_v.size());
 }
 
-void test_kstest_fail()
+void test_ks_2samp_fail()
 {
     // test empty cdf
     // expected assert to fail
@@ -126,10 +126,10 @@ void test_kstest_fail()
     assert(cdf_a.empty());
     assert(cdf_b.empty());
 
-    assert(rododendrs::kstest(cdf_a, cdf_b) == 0.0);
+    assert(rododendrs::ks_2samp(cdf_a, cdf_b) == 0.0);
 }
 
-void test_kstest_same()
+void test_ks_2samp_same()
 {
     // test cdf of same value v
     const double v_min   = -100;
@@ -151,11 +151,11 @@ void test_kstest_same()
     assert(cdf_a.size() == len);
     assert(cdf_b.size() == len);
 
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
-    assert(rododendrs::approx_equal<double>(kstest, 0.0));
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
+    assert(rododendrs::approx_equal<double>(ks_d, 0.0));
 }
 
-void test_kstest_not_same()
+void test_ks_2samp_not_same()
 {
     // test cdf of same differnt values va, vb
     const double v_min   = -100;
@@ -182,11 +182,11 @@ void test_kstest_not_same()
     assert(cdf_a.size() == len);
     assert(cdf_b.size() == len);
 
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
-    assert(rododendrs::approx_equal<double>(kstest, 1.0));
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
+    assert(rododendrs::approx_equal<double>(ks_d, 1.0));
 }
 
-void test_kstest_match_rnd()
+void test_ks_2samp_match_rnd()
 {
     // test cdf of matching random values
     const double v_min   = -100;
@@ -208,11 +208,11 @@ void test_kstest_match_rnd()
     assert(cdf_a.size() == len);
     assert(cdf_b.size() == len);
 
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
-    assert(rododendrs::approx_equal<double>(kstest, 0.0));
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
+    assert(rododendrs::approx_equal<double>(ks_d, 0.0));
 }
 
-void test_kstest_match_rnd_n()
+void test_ks_2samp_match_rnd_n()
 {
     // test cdf of matching random values with matching random occurence
     const double v_min   = -100;
@@ -241,11 +241,11 @@ void test_kstest_match_rnd_n()
     assert(cdf_a.size() == total_len);
     assert(cdf_b.size() == total_len);
 
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
-    assert(rododendrs::approx_equal<double>(kstest, 0.0));
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
+    assert(rododendrs::approx_equal<double>(ks_d, 0.0));
 }
 
-void test_kstest_match_rnd_n_len_diff()
+void test_ks_2samp_match_rnd_n_len_diff()
 {
     // test cdf of matching random values with matching random occurence
     const double v_min             = -100;
@@ -283,11 +283,11 @@ void test_kstest_match_rnd_n_len_diff()
     assert(cdf_a.size() == total_len_a);
     assert(cdf_b.size() == total_len_b);
 
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
-    assert(rododendrs::approx_equal<double>(kstest, 0.0));
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
+    assert(rododendrs::approx_equal<double>(ks_d, 0.0));
 }
 
-void test_kstest_match_rnd_vals_nomatch_rnd_n()
+void test_ks_2samp_match_rnd_vals_nomatch_rnd_n()
 {
     // test cdf of matching rnd values with not matching rnd n
     const double v_min   = -10;
@@ -340,7 +340,7 @@ void test_kstest_match_rnd_vals_nomatch_rnd_n()
     assert(cdf_a.size() == total_len_a);
     assert(cdf_b.size() == total_len_b);
 
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
 
     const double pa_step = 1.0 / static_cast<double>(total_len_a);
     const double pb_step = 1.0 / static_cast<double>(total_len_b);
@@ -351,10 +351,10 @@ void test_kstest_match_rnd_vals_nomatch_rnd_n()
         pdiff_max       = std::max(pdiff_max, std::abs(pa - pb));
     }
 
-    assert(rododendrs::approx_equal<double>(kstest, pdiff_max));
+    assert(rododendrs::approx_equal<double>(ks_d, pdiff_max));
 }
 
-void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
+void test_ks_2samp_nomatch_rnd_vals_nomatch_rnd_n()
 {
     // test cdf of not matching rnd values with not matching rnd n
     const double v_min   = -10;
@@ -418,10 +418,10 @@ void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
     }
     assert(cdf_b.size() == total_len_b);
 
-    // real kstest
-    const double kstest = rododendrs::kstest(cdf_a, cdf_b);
+    // real ks test
+    const double ks_d = rododendrs::ks_2samp(cdf_a, cdf_b);
 
-    // test kstest
+    // test ks test
     const double pa_step = 1.0 / static_cast<double>(total_len_a);
     const double pb_step = 1.0 / static_cast<double>(total_len_b);
     double pdiff_max     = 0;
@@ -465,10 +465,10 @@ void test_kstest_nomatch_rnd_vals_nomatch_rnd_n()
     assert(rododendrs::approx_equal<double>(pa, 1.0));
     assert(rododendrs::approx_equal<double>(pb, 1.0));
 
-    assert(rododendrs::approx_equal<double>(kstest, pdiff_max));
+    assert(rododendrs::approx_equal<double>(ks_d, pdiff_max));
 }
 
-void test_kstest_nested_cdf()
+void test_ks_2samp_nested_cdf()
 {
     // nested kctx with interrupts at arbitrary place/in the middle of
     // unique_val stack
@@ -540,9 +540,9 @@ void test_kstest_nested_cdf()
 
 exit_loop:
 
-    // kstest check
-    rododendrs::KstestCtx kctx(supercdf_a, supercdf_b);
-    rododendrs::KstestCtx kctx_reset(supercdf_a, supercdf_b);
+    // ks test check
+    rododendrs::Ks2SampCtx kctx(supercdf_a, supercdf_b);
+    rododendrs::Ks2SampCtx kctx_reset(supercdf_a, supercdf_b);
     size_t prev_cdf_len_a = 0;
     size_t prev_cdf_len_b = 0;
     assert(cdfs_a.size() == n_nested);
@@ -577,10 +577,10 @@ exit_loop:
 
         kctx.resize(cdf_len_a, cdf_len_b);
         assert(kctx.do_saves == true);
-        const double kstest1 = rododendrs::kstest(kctx, cdf_len_a, cdf_len_b);
+        const double ks_d1 = rododendrs::ks_2samp(kctx, cdf_len_a, cdf_len_b);
         assert(kctx.a_next.i == kctx.a_next.i_end);
         assert(kctx.b_next.i == kctx.b_next.i_end);
-        assert(kctx.max_pdiff == kstest1);
+        assert(kctx.max_pdiff == ks_d1);
 
 #if 0
         kctx.a_next.cdf.to_csv("a_next.csv", cdf_len_a);
@@ -589,15 +589,15 @@ exit_loop:
 
         kctx_reset.reset();
         assert(kctx_reset.do_saves == false);
-        const double kstest2 =
-                rododendrs::kstest(kctx_reset, cdf_len_a, cdf_len_b);
+        const double ks_d2 =
+                rododendrs::ks_2samp(kctx_reset, cdf_len_a, cdf_len_b);
         assert(kctx.a_next.i_begin == kctx_reset.a_next.i_begin);
         assert(kctx.a_next.i_end == kctx_reset.a_next.i_end);
         assert(kctx.b_next.i_begin == kctx_reset.b_next.i_begin);
         assert(kctx.b_next.i_end == kctx_reset.b_next.i_end);
         assert(kctx_reset.a_next.i == kctx_reset.a_next.i_end);
         assert(kctx_reset.b_next.i == kctx_reset.b_next.i_end);
-        assert(kctx_reset.max_pdiff == kstest2);
+        assert(kctx_reset.max_pdiff == ks_d2);
 
         assert(kctx.a_next.i == kctx_reset.a_next.i);
         assert(kctx.b_next.i == kctx_reset.b_next.i);
@@ -621,11 +621,11 @@ exit_loop:
         assert(kctx.a_next.i_max_pdiff == kctx_reset.a_next.i_max_pdiff);
         assert(kctx.b_next.i_max_pdiff == kctx_reset.b_next.i_max_pdiff);
 
-        const double kstest3 =
-                rododendrs::kstest(cdfs_a[i_cdf], cdfs_b[i_cdf]);
+        const double ks_d3 =
+                rododendrs::ks_2samp(cdfs_a[i_cdf], cdfs_b[i_cdf]);
 
-        assert(rododendrs::approx_equal<double>(kstest1, kstest2));
-        assert(rododendrs::approx_equal<double>(kstest2, kstest3));
+        assert(rododendrs::approx_equal<double>(ks_d1, ks_d2));
+        assert(rododendrs::approx_equal<double>(ks_d2, ks_d3));
     }
 }
 
@@ -641,14 +641,14 @@ int main()
 #if 0
                         test_kstest_fail();
 #endif
-        test_kstest_same();
-        test_kstest_not_same();
-        test_kstest_match_rnd();
-        test_kstest_match_rnd_n();
-        test_kstest_match_rnd_n_len_diff();
-        test_kstest_match_rnd_vals_nomatch_rnd_n();
-        test_kstest_nomatch_rnd_vals_nomatch_rnd_n();
-        test_kstest_nested_cdf();
+        test_ks_2samp_same();
+        test_ks_2samp_not_same();
+        test_ks_2samp_match_rnd();
+        test_ks_2samp_match_rnd_n();
+        test_ks_2samp_match_rnd_n_len_diff();
+        test_ks_2samp_match_rnd_vals_nomatch_rnd_n();
+        test_ks_2samp_nomatch_rnd_vals_nomatch_rnd_n();
+        test_ks_2samp_nested_cdf();
     }
 
     std::cout << "all tests passed" << std::endl;

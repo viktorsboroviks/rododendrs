@@ -29,7 +29,7 @@ def test_cdf(run_i: int):
         print(pd_a)
         print(pd_b)
         print(
-            f"rododendrs::kstest: {result_float}, scipy.stats.ks_2samp: {result_scipy}"
+            f"rododendrs::ks_2samp: {result_float}, scipy.stats.ks_2samp: {result_scipy}"
         )
     assert is_close
 

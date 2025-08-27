@@ -953,7 +953,13 @@ struct CdfCtx {
     }
 };
 
-struct KstestCtx {
+// KS test
+
+// 1 sample ks test
+// TODO: add
+
+// 2 sample ks test context
+struct Ks2SampCtx {
     CdfCtx a_next;
     CdfCtx b_next;
     CdfCtx a_saved;
@@ -974,7 +980,7 @@ struct KstestCtx {
         b_next = b_saved;
     }
 
-    KstestCtx(const CDF& cdf_a, const CDF& cdf_b) :
+    Ks2SampCtx(const CDF& cdf_a, const CDF& cdf_b) :
         a_next(cdf_a),
         b_next(cdf_b),
         a_saved(cdf_a),
@@ -1066,8 +1072,59 @@ struct KstestCtx {
     }
 };
 
-// calculate kstest until end_i
-double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
+// C(alpha) critical constant for ks test
+// - alpha is significance level
+// ref: https://en.wikipedia.org/wiki/Kolmogorov–Smirnov_test
+constexpr double ks_crit_const(double alpha)
+{
+    assert(alpha > 0.0);
+    assert(alpha < 1.0);
+
+    // most common alphas
+    if (alpha == 0.05) {
+        return 1.358;
+    }
+    else if (alpha == 0.20) {
+        return 1.073;
+    }
+    else if (alpha == 0.15) {
+        return 1.138;
+    }
+    else if (alpha == 0.10) {
+        return 1.224;
+    }
+    else if (alpha == 0.025) {
+        return 1.48;
+    }
+    else if (alpha == 0.01) {
+        return 1.628;
+    }
+    else if (alpha == 0.005) {
+        return 1.731;
+    }
+    else if (alpha == 0.001) {
+        return 1.949;
+    }
+
+    return std::sqrt(-0.5 * std::log(alpha / 2.0));
+}
+
+// critical value for 2 sample ks test
+// - return ks test statistic D critical value
+// ref: https://en.wikipedia.org/wiki/Kolmogorov–Smirnov_test
+constexpr double ks_2samp_crit_value(double alpha, size_t len_a, size_t len_b)
+{
+    assert(len_a > 0);
+    assert(len_b > 0);
+
+    const double c_alpha = ks_crit_const(alpha);
+    return c_alpha * std::sqrt((static_cast<double>(len_a + len_b)) /
+                               (static_cast<double>(len_a * len_b)));
+}
+
+// calculate 2 sample ks test until end_i
+// - return ks test statistic D
+double ks_2samp(Ks2SampCtx& ctx, size_t len_a, size_t len_b)
 {
     assert(ctx.a_next.i_end <= len_a);
     assert(ctx.b_next.i_end <= len_b);
@@ -1141,16 +1198,16 @@ double kstest(KstestCtx& ctx, size_t len_a, size_t len_b)
     return ctx.max_pdiff;
 }
 
-double kstest(KstestCtx& ctx)
+double ks_2samp(Ks2SampCtx& ctx)
 {
-    return kstest(ctx, ctx.a_next.i_end, ctx.b_next.i_end);
+    return ks_2samp(ctx, ctx.a_next.i_end, ctx.b_next.i_end);
 }
 
-// calculate kstest over whole range
-double kstest(const CDF& cdf_a, const CDF& cdf_b)
+// calculate 2 sample ks test over whole range
+double ks_2samp(const CDF& cdf_a, const CDF& cdf_b)
 {
-    KstestCtx ctx(cdf_a, cdf_b);
-    return kstest(ctx);
+    Ks2SampCtx ctx(cdf_a, cdf_b);
+    return ks_2samp(ctx);
 }
 
 }  // namespace rododendrs
