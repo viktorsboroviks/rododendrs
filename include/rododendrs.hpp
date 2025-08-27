@@ -1109,6 +1109,17 @@ constexpr double ks_crit_const(double alpha)
     return std::sqrt(-0.5 * std::log(alpha / 2.0));
 }
 
+// critical value for 1 sample ks test
+// - return ks test statistic D critical value
+// ref: https://en.wikipedia.org/wiki/Kolmogorov–Smirnov_test
+constexpr double ks_1samp_crit_value(double alpha, size_t len)
+{
+    assert(len > 0);
+
+    const double c_alpha = ks_crit_const(alpha);
+    return c_alpha / static_cast<double>(len);
+}
+
 // critical value for 2 sample ks test
 // - return ks test statistic D critical value
 // ref: https://en.wikipedia.org/wiki/Kolmogorov–Smirnov_test
