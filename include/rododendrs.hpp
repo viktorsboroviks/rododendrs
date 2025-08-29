@@ -8,6 +8,7 @@
 #include <cmath>
 #include <deque>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <random>
 #include <set>
@@ -143,9 +144,9 @@ double rnd01_norm()
 }
 
 template <typename T>
-bool approx_equal(const T& a, const T& b, T float_err = 1e-5)
+bool approx_equal(const T& a, const T& b, T tolerance = 1e-5)
 {
-    return std::abs(a - b) < float_err;
+    return std::abs(a - b) < tolerance;
 }
 
 // r-squared, coefficient of determination
@@ -1219,6 +1220,56 @@ double ks_2samp(const CDF& cdf_a, const CDF& cdf_b)
 {
     Ks2SampCtx ctx(cdf_a, cdf_b);
     return ks_2samp(ctx);
+}
+
+double num_solver(std::function<double(double)> f,
+                  double xa,
+                  double xb,
+                  size_t n_max_iter = 1000,
+                  double tolerance  = 1e-6)
+{
+    double d = xb - xa;
+
+    // find bounds
+    double f_xa = f(xa);
+    double f_xb = f(xb);
+    // find interval where signs differ
+    for (size_t i = 0; i < n_max_iter / 2; i++) {
+        // check if signs differ
+        if (f_xa * f_xb < 0.0) {
+            break;
+        }
+        // move forward
+        xa = xb;
+        d *= 2.0;
+        xb += d;
+        f_xa = f_xb;
+        f_xb = f(xb);
+    }
+    assert(f_xa * f_xb < 0.0);
+
+    // find root with bisection
+    for (size_t i = 0; i < n_max_iter / 2; i++) {
+        const double xmid   = (xa + xb) / 2.0;
+        const double f_xmid = f(xmid);
+        if (std::abs(f_xmid) < tolerance) {
+            return xmid;
+        }
+        if (f_xa * f_xmid < 0.0) {
+            xb = xmid;
+        }
+        else {
+            xa   = xmid;
+            f_xa = f_xmid;
+        }
+        if (std::abs(xb - xa) < tolerance) {
+            return (xa + xb) / 2.0;
+        }
+    }
+
+    // root not found
+    assert(false);
+    return -1.0;
 }
 
 }  // namespace rododendrs

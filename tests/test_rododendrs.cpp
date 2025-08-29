@@ -629,6 +629,19 @@ exit_loop:
     }
 }
 
+void test_num_solver()
+{
+    const double x_ref = rododendrs::rnd_in_range<double>(0, 10.0);
+    std::function<double(double)> f = [x_ref](double x) {
+        return (x * x) - (x_ref * x_ref);
+    };
+    const double x_res_pos = rododendrs::num_solver(f, 0.0, 1.0);
+    assert(rododendrs::approx_equal<double>(x_res_pos, x_ref));
+
+    const double x_res_neg = rododendrs::num_solver(f, 0.0, -1.0);
+    assert(rododendrs::approx_equal<double>(x_res_neg, -x_ref));
+}
+
 int main()
 {
     const size_t test_n = 100;
@@ -649,6 +662,7 @@ int main()
         test_ks_2samp_match_rnd_vals_nomatch_rnd_n();
         test_ks_2samp_nomatch_rnd_vals_nomatch_rnd_n();
         test_ks_2samp_nested_cdf();
+        test_num_solver();
     }
 
     std::cout << "all tests passed" << std::endl;
